@@ -30,8 +30,8 @@ func NewStrengthTrainingRepository(db *sql.DB) (*StrengthTrainingRepository, err
 	return repo, nil
 }
 
-// NewStrengthTrainingRepositoryWithFile はファイルパスからSQLite Repositoryを作成します
-func NewStrengthTrainingRepositoryWithFile(dbPath string) (*StrengthTrainingRepository, error) {
+// NewStrengthRepository はファイルパスからSQLite Repositoryを作成します
+func NewStrengthRepository(dbPath string) (repository.StrengthTrainingRepository, error) {
 	db, err := sql.Open("sqlite", dbPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open database: %w", err)
@@ -41,6 +41,11 @@ func NewStrengthTrainingRepositoryWithFile(dbPath string) (*StrengthTrainingRepo
 	db.SetMaxOpenConns(1) // SQLiteは単一接続推奨
 
 	return NewStrengthTrainingRepository(db)
+}
+
+// Initialize はデータベースの初期化（テーブル作成）を行います
+func (r *StrengthTrainingRepository) Initialize() error {
+	return r.migrate()
 }
 
 // migrate はマイグレーションを実行します

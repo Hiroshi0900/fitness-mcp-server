@@ -9,6 +9,9 @@ import (
 
 // StrengthTrainingRepository は筋トレデータの永続化を担当するインターフェース
 type StrengthTrainingRepository interface {
+	// Initialize はデータベースの初期化を行います
+	Initialize() error
+
 	// Save は筋トレセッションを保存します
 	Save(training *strength.StrengthTraining) error
 
