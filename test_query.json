@@ -1,0 +1,1 @@
+{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"get_trainings_by_date_range","arguments":{"start_date":"2024-01-01","end_date":"2024-12-31"}}}

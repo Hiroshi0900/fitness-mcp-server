@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"embed"
 	"fmt"
+	"strings"
 	"time"
 
 	"fitness-mcp-server/internal/domain/shared"
@@ -38,7 +39,9 @@ func NewStrengthRepository(dbPath string) (repository.StrengthTrainingRepository
 	}
 
 	// SQLiteの設定
-	db.SetMaxOpenConns(1) // SQLiteは単一接続推奨
+	db.SetMaxOpenConns(10)           // 複数接続を許可
+	db.SetMaxIdleConns(2)            // アイドル接続数
+	db.SetConnMaxLifetime(time.Hour) // 接続の最大生存時間
 
 	return NewStrengthTrainingRepository(db)
 }
@@ -232,6 +235,95 @@ func (r *StrengthTrainingRepository) findExercisesByTrainingID(trainingID shared
 	return exercises, rows.Err()
 }
 
+// findExercisesByTrainingIDs は複数のトレーニングIDでエクササイズを一括取得します
+func (r *StrengthTrainingRepository) findExercisesByTrainingIDs(trainingIDs []string) (map[string][]*strength.Exercise, error) {
+	if len(trainingIDs) == 0 {
+		return make(map[string][]*strength.Exercise), nil
+	}
+
+	// IN句用のプレースホルダーを生成
+	placeholders := make([]string, len(trainingIDs))
+	args := make([]interface{}, len(trainingIDs))
+	for i, id := range trainingIDs {
+		placeholders[i] = "?"
+		args[i] = id
+	}
+
+	query := fmt.Sprintf(`
+		SELECT id, training_id, name, category 
+		FROM exercises 
+		WHERE training_id IN (%s) 
+		ORDER BY training_id, exercise_order`,
+		strings.Join(placeholders, ","))
+
+	rows, err := r.db.Query(query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	// エクササイズIDのリストを取得
+	var exerciseIDs []int64
+	exerciseDataMap := make(map[int64]struct {
+		trainingID string
+		name       string
+		category   string
+	})
+	exercisesByTraining := make(map[string][]*strength.Exercise)
+
+	for rows.Next() {
+		var exerciseID int64
+		var trainingID, name, category string
+
+		if err := rows.Scan(&exerciseID, &trainingID, &name, &category); err != nil {
+			return nil, err
+		}
+
+		exerciseIDs = append(exerciseIDs, exerciseID)
+		exerciseDataMap[exerciseID] = struct {
+			trainingID string
+			name       string
+			category   string
+		}{trainingID, name, category}
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	// 一括でセットを取得
+	setsByExercise, err := r.findSetsByExerciseIDs(exerciseIDs)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load sets: %w", err)
+	}
+
+	// エクササイズオブジェクトを作成
+	for exerciseID, data := range exerciseDataMap {
+		exerciseName, err := strength.NewExerciseName(data.name)
+		if err != nil {
+			return nil, fmt.Errorf("invalid exercise name: %w", err)
+		}
+
+		exerciseCategory, err := strength.NewExerciseCategory(data.category)
+		if err != nil {
+			return nil, fmt.Errorf("invalid exercise category: %w", err)
+		}
+
+		exercise := strength.NewExercise(exerciseName, exerciseCategory)
+
+		// セットを追加
+		if sets, exists := setsByExercise[exerciseID]; exists {
+			for _, set := range sets {
+				exercise.AddSet(set)
+			}
+		}
+
+		exercisesByTraining[data.trainingID] = append(exercisesByTraining[data.trainingID], exercise)
+	}
+
+	return exercisesByTraining, nil
+}
+
 // findSetsByExerciseID はエクササイズIDでセットを検索します
 func (r *StrengthTrainingRepository) findSetsByExerciseID(exerciseID int64) ([]strength.Set, error) {
 	rows, err := r.db.Query(`
@@ -286,22 +378,103 @@ func (r *StrengthTrainingRepository) findSetsByExerciseID(exerciseID int64) ([]s
 	return sets, rows.Err()
 }
 
+// findSetsByExerciseIDs は複数のエクササイズIDでセットを一括取得します
+func (r *StrengthTrainingRepository) findSetsByExerciseIDs(exerciseIDs []int64) (map[int64][]strength.Set, error) {
+	if len(exerciseIDs) == 0 {
+		return make(map[int64][]strength.Set), nil
+	}
+
+	// IN句用のプレースホルダーを生成
+	placeholders := make([]string, len(exerciseIDs))
+	args := make([]interface{}, len(exerciseIDs))
+	for i, id := range exerciseIDs {
+		placeholders[i] = "?"
+		args[i] = id
+	}
+
+	query := fmt.Sprintf(`
+		SELECT exercise_id, weight_kg, reps, rest_time_seconds, rpe 
+		FROM sets 
+		WHERE exercise_id IN (%s) 
+		ORDER BY exercise_id, set_order`,
+		strings.Join(placeholders, ","))
+
+	rows, err := r.db.Query(query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	setsByExercise := make(map[int64][]strength.Set)
+	for rows.Next() {
+		var exerciseID int64
+		var weightKg float64
+		var reps int
+		var restTimeSeconds int
+		var rpe *int
+
+		if err := rows.Scan(&exerciseID, &weightKg, &reps, &restTimeSeconds, &rpe); err != nil {
+			return nil, err
+		}
+
+		weight, err := strength.NewWeight(weightKg)
+		if err != nil {
+			return nil, fmt.Errorf("invalid weight: %w", err)
+		}
+
+		repsObj, err := strength.NewReps(reps)
+		if err != nil {
+			return nil, fmt.Errorf("invalid reps: %w", err)
+		}
+
+		restTime, err := strength.NewRestTime(time.Duration(restTimeSeconds) * time.Second)
+		if err != nil {
+			return nil, fmt.Errorf("invalid rest time: %w", err)
+		}
+
+		var rpeObj *strength.RPE
+		if rpe != nil {
+			rpeValue, err := strength.NewRPE(*rpe)
+			if err != nil {
+				return nil, fmt.Errorf("invalid RPE: %w", err)
+			}
+			rpeObj = &rpeValue
+		}
+
+		set := strength.NewSet(weight, repsObj, restTime, rpeObj)
+		setsByExercise[exerciseID] = append(setsByExercise[exerciseID], set)
+	}
+
+	return setsByExercise, rows.Err()
+}
+
 // FindByDateRange は指定した期間の筋トレセッションを検索します
 func (r *StrengthTrainingRepository) FindByDateRange(start, end time.Time) ([]*strength.StrengthTraining, error) {
-	rows, err := r.db.Query(`
-		SELECT id 
+	// 筋トレセッションを一括取得
+	trainingRows, err := r.db.Query(`
+		SELECT id, date, notes 
 		FROM strength_trainings 
 		WHERE date BETWEEN ? AND ? 
 		ORDER BY date DESC`, start, end)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer trainingRows.Close()
 
-	var trainings []*strength.StrengthTraining
-	for rows.Next() {
+	// トレーニングIDのリストを作成
+	var trainingIDs []string
+	trainingDataMap := make(map[string]struct {
+		id    shared.TrainingID
+		date  time.Time
+		notes string
+	})
+
+	for trainingRows.Next() {
 		var idStr string
-		if err := rows.Scan(&idStr); err != nil {
+		var date time.Time
+		var notes string
+
+		if err := trainingRows.Scan(&idStr, &date, &notes); err != nil {
 			return nil, err
 		}
 
@@ -310,15 +483,44 @@ func (r *StrengthTrainingRepository) FindByDateRange(start, end time.Time) ([]*s
 			return nil, fmt.Errorf("invalid training ID: %w", err)
 		}
 
-		training, err := r.FindByID(id)
-		if err != nil {
-			return nil, err
+		trainingIDs = append(trainingIDs, idStr)
+		trainingDataMap[idStr] = struct {
+			id    shared.TrainingID
+			date  time.Time
+			notes string
+		}{id, date, notes}
+	}
+
+	if err := trainingRows.Err(); err != nil {
+		return nil, err
+	}
+
+	if len(trainingIDs) == 0 {
+		return []*strength.StrengthTraining{}, nil
+	}
+
+	// 一括でエクササイズを取得
+	exercisesByTraining, err := r.findExercisesByTrainingIDs(trainingIDs)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load exercises: %w", err)
+	}
+
+	// 結果を組み立て
+	var trainings []*strength.StrengthTraining
+	for _, idStr := range trainingIDs {
+		data := trainingDataMap[idStr]
+		training := strength.NewStrengthTraining(data.id, data.date, data.notes)
+
+		if exercises, exists := exercisesByTraining[idStr]; exists {
+			for _, exercise := range exercises {
+				training.AddExercise(exercise)
+			}
 		}
 
 		trainings = append(trainings, training)
 	}
 
-	return trainings, rows.Err()
+	return trainings, nil
 }
 
 // FindByDate は指定した日の筋トレセッションを検索します
