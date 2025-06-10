@@ -7,17 +7,24 @@ import (
 
 // StrengthQueryHandler は筋トレデータの読み取り系ハンドラー
 type StrengthQueryHandler struct {
-	usecase usecase.StrengthQueryUsecase
+	usecase           usecase.StrengthQueryUsecase
+	personalRecordsUC usecase.PersonalRecordsUsecase
 }
 
 // NewStrengthQueryHandler は新しいStrengthQueryHandlerを作成します
-func NewStrengthQueryHandler(usecase usecase.StrengthQueryUsecase) *StrengthQueryHandler {
+func NewStrengthQueryHandler(usecase usecase.StrengthQueryUsecase, personalRecordsUC usecase.PersonalRecordsUsecase) *StrengthQueryHandler {
 	return &StrengthQueryHandler{
-		usecase: usecase,
+		usecase:           usecase,
+		personalRecordsUC: personalRecordsUC,
 	}
 }
 
 // GetTrainingsByDateRange は指定した期間のトレーニングセッションを取得します
 func (h *StrengthQueryHandler) GetTrainingsByDateRange(query dto.GetTrainingsByDateRangeQuery) (*dto.GetTrainingsByDateRangeResponse, error) {
 	return h.usecase.GetTrainingsByDateRange(query)
+}
+
+// GetPersonalRecords は個人記録を取得します
+func (h *StrengthQueryHandler) GetPersonalRecords(query dto.GetPersonalRecordsQuery) (*dto.GetPersonalRecordsResponse, error) {
+	return h.personalRecordsUC.GetPersonalRecords(query)
 }

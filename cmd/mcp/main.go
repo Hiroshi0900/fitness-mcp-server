@@ -39,7 +39,8 @@ func main() {
 
 	// Query系の初期化
 	queryUsecase := query_usecase.NewStrengthQueryUsecase(repo)
-	queryHandler := query_handler.NewStrengthQueryHandler(queryUsecase)
+	personalRecordsUsecase := query_usecase.NewPersonalRecordsUsecase(repo)
+	queryHandler := query_handler.NewStrengthQueryHandler(queryUsecase, personalRecordsUsecase)
 
 	// ToolHandlerFuncのラップ
 	toolHandlerFunc := func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -166,6 +167,64 @@ func main() {
 
 	s.AddTool(queryTool, queryToolHandler)
 
+	// 個人記録取得ツールの追加
+	personalRecordsTool := mcp.NewTool(
+		"get_personal_records",
+		mcp.WithDescription("個人記録（最大重量、最大レップ数、最大ボリューム等）を取得する"),
+		mcp.WithString("exercise_name",
+			mcp.Description("特定のエクササイズ名（省略可）。指定すると該当エクササイズの記録のみを取得します。"),
+		),
+	)
+
+	personalRecordsToolHandler := func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		// タイムアウト設定（30秒）
+		timeoutCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+		defer cancel()
+
+		// Goroutineで処理を実行
+		resultCh := make(chan *mcp.CallToolResult, 1)
+		errorCh := make(chan error, 1)
+
+		go func() {
+			// パラメータの取得（オプション）
+			var exerciseName *string
+			if paramsMap, ok := req.Params.Arguments.(map[string]interface{}); ok {
+				if name, exists := paramsMap["exercise_name"]; exists {
+					if nameStr, ok := name.(string); ok && nameStr != "" {
+						exerciseName = &nameStr
+					}
+				}
+			}
+
+			// クエリの実行
+			query := query_dto.GetPersonalRecordsQuery{
+				ExerciseName: exerciseName,
+			}
+
+			response, err := queryHandler.GetPersonalRecords(query)
+			if err != nil {
+				errorCh <- fmt.Errorf("個人記録取得に失敗しました: %w", err)
+				return
+			}
+
+			// レスポンスの整形
+			result := formatPersonalRecordsResponse(response)
+			resultCh <- mcp.NewToolResultText(result)
+		}()
+
+		// タイムアウトまたは結果を待機
+		select {
+		case <-timeoutCtx.Done():
+			return mcp.NewToolResultError("リクエストがタイムアウトしました（30秒）"), nil
+		case err := <-errorCh:
+			return mcp.NewToolResultError(err.Error()), nil
+		case result := <-resultCh:
+			return result, nil
+		}
+	}
+
+	s.AddTool(personalRecordsTool, personalRecordsToolHandler)
+
 	// Start the stdio server
 	if err := server.ServeStdio(s); err != nil {
 		fmt.Printf("Server error: %v\n", err)
@@ -218,6 +277,57 @@ func formatQueryResponse(response *query_dto.GetTrainingsByDateRangeResponse) st
 				exercise.Name, exercise.Category, len(exercise.Sets))
 		}
 		result += "\n"
+	}
+
+	return result
+}
+
+// formatPersonalRecordsResponse は個人記録レスポンスを見やすい形式にフォーマットします
+func formatPersonalRecordsResponse(response *query_dto.GetPersonalRecordsResponse) string {
+	if response.Count == 0 {
+		return "🏆 **個人記録**\n\n❌ 記録が見つかりませんでした。"
+	}
+
+	result := fmt.Sprintf("🏆 **個人記録 (%d種目)**\n\n", response.Count)
+
+	for i, record := range response.Records {
+		result += fmt.Sprintf("**%d. %s (%s)**\n", i+1, record.ExerciseName, record.Category)
+		result += fmt.Sprintf("📊 総セッション数: %d回 | 最終実施: %s\n\n",
+			record.TotalSessions,
+			record.LastPerformed.Format("2006-01-02"))
+
+		// 最大重量
+		result += fmt.Sprintf("⚖️ **最大重量**: %.1fkg\n", record.MaxWeight.Value)
+		result += fmt.Sprintf("   📅 達成日: %s (ID: %s)\n",
+			record.MaxWeight.Date.Format("2006-01-02"),
+			record.MaxWeight.TrainingID)
+		if record.MaxWeight.SetDetails != nil {
+			details := record.MaxWeight.SetDetails
+			rpeText := ""
+			if details.RPE != nil {
+				rpeText = fmt.Sprintf(", RPE: %d", *details.RPE)
+			}
+			result += fmt.Sprintf("   🔍 セット詳細: %.1fkg × %d回 (休憩: %ds%s)\n",
+				details.WeightKg, details.Reps, details.RestTimeSeconds, rpeText)
+		}
+
+		// 最大レップ数
+		result += fmt.Sprintf("\n🔥 **最大レップ数**: %.0f回\n", record.MaxReps.Value)
+		result += fmt.Sprintf("   📅 達成日: %s (ID: %s)\n",
+			record.MaxReps.Date.Format("2006-01-02"),
+			record.MaxReps.TrainingID)
+
+		// 最大ボリューム
+		result += fmt.Sprintf("\n📊 **最大ボリューム**: %.1fkg\n", record.MaxVolume.Value)
+		result += fmt.Sprintf("   📅 達成日: %s (ID: %s)\n",
+			record.MaxVolume.Date.Format("2006-01-02"),
+			record.MaxVolume.TrainingID)
+
+		if i < len(response.Records)-1 {
+			result += "\n---\n\n"
+		} else {
+			result += "\n"
+		}
 	}
 
 	return result

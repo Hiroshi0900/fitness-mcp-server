@@ -35,18 +35,3 @@ func (h *StrengthCommandHandler) UpdateTraining(cmd dto.UpdateTrainingCommand) (
 func (h *StrengthCommandHandler) DeleteTraining(cmd dto.DeleteTrainingCommand) (*dto.DeleteTrainingResult, error) {
 	return h.usecase.DeleteTraining(cmd)
 }
-
-//// RecordBIG3Session はBIG3セッションを記録する便利メソッド
-//func (h *StrengthCommandHandler) RecordBIG3Session(
-//	benchPressSets []SetCommand,
-//	squatSets []SetCommand,
-//	deadliftSets []SetCommand,
-//	notes string,
-//) (*RecordTrainingResult, error) {
-//	return h.usecase.RecordBIG3Session(benchPressSets, squatSets, deadliftSets, notes)
-//}
-//
-//// RecordQuickBenchPress はベンチプレスの簡単記録メソッド
-//func (h *StrengthCommandHandler) RecordQuickBenchPress(weightKg float64, reps int, sets int, notes string) (*RecordTrainingResult, error) {
-//	return h.usecase.RecordQuickBenchPress(weightKg, reps, sets, notes)
-//}

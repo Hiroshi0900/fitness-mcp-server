@@ -17,14 +17,14 @@ import (
 //go:embed migrations/*.sql
 var migrationFiles embed.FS
 
-// StrengthTrainingRepository はSQLiteを使った筋トレRepository実装
-type StrengthTrainingRepository struct {
+// StrengthRepository はSQLiteを使った筋トレRepository実装
+type StrengthRepository struct {
 	db *sql.DB
 }
 
 // NewStrengthTrainingRepository は新しいSQLite Repositoryを作成します
-func NewStrengthTrainingRepository(db *sql.DB) (*StrengthTrainingRepository, error) {
-	repo := &StrengthTrainingRepository{db: db}
+func NewStrengthTrainingRepository(db *sql.DB) (*StrengthRepository, error) {
+	repo := &StrengthRepository{db: db}
 	if err := repo.migrate(); err != nil {
 		return nil, fmt.Errorf("migration failed: %w", err)
 	}
@@ -47,12 +47,12 @@ func NewStrengthRepository(dbPath string) (repository.StrengthTrainingRepository
 }
 
 // Initialize はデータベースの初期化（テーブル作成）を行います
-func (r *StrengthTrainingRepository) Initialize() error {
+func (r *StrengthRepository) Initialize() error {
 	return r.migrate()
 }
 
 // migrate はマイグレーションを実行します
-func (r *StrengthTrainingRepository) migrate() error {
+func (r *StrengthRepository) migrate() error {
 	migrationSQL, err := migrationFiles.ReadFile("migrations/001_initial_schema.sql")
 	if err != nil {
 		return fmt.Errorf("failed to read migration file: %w", err)
@@ -67,12 +67,12 @@ func (r *StrengthTrainingRepository) migrate() error {
 }
 
 // Close はデータベース接続を閉じます
-func (r *StrengthTrainingRepository) Close() error {
+func (r *StrengthRepository) Close() error {
 	return r.db.Close()
 }
 
 // Save は筋トレセッションを保存します
-func (r *StrengthTrainingRepository) Save(training *strength.StrengthTraining) error {
+func (r *StrengthRepository) Save(training *strength.StrengthTraining) error {
 	tx, err := r.db.Begin()
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
@@ -110,7 +110,7 @@ func (r *StrengthTrainingRepository) Save(training *strength.StrengthTraining) e
 }
 
 // saveExercise はエクササイズを保存し、IDを返します
-func (r *StrengthTrainingRepository) saveExercise(tx *sql.Tx, trainingID shared.TrainingID, exercise *strength.Exercise, order int) (int64, error) {
+func (r *StrengthRepository) saveExercise(tx *sql.Tx, trainingID shared.TrainingID, exercise *strength.Exercise, order int) (int64, error) {
 	result, err := tx.Exec(`
 		INSERT INTO exercises (training_id, name, category, exercise_order) 
 		VALUES (?, ?, ?, ?)`,
@@ -127,7 +127,7 @@ func (r *StrengthTrainingRepository) saveExercise(tx *sql.Tx, trainingID shared.
 }
 
 // saveSet はセットを保存します
-func (r *StrengthTrainingRepository) saveSet(tx *sql.Tx, exerciseID int64, set strength.Set, order int) error {
+func (r *StrengthRepository) saveSet(tx *sql.Tx, exerciseID int64, set strength.Set, order int) error {
 	var rpe *int
 	if set.RPE() != nil {
 		rpeValue := set.RPE().Rating()
@@ -148,7 +148,7 @@ func (r *StrengthTrainingRepository) saveSet(tx *sql.Tx, exerciseID int64, set s
 }
 
 // FindByID はIDで筋トレセッションを検索します
-func (r *StrengthTrainingRepository) FindByID(id shared.TrainingID) (*strength.StrengthTraining, error) {
+func (r *StrengthRepository) FindByID(id shared.TrainingID) (*strength.StrengthTraining, error) {
 	// 筋トレセッションを取得
 	row := r.db.QueryRow(`
 		SELECT id, date, notes 
@@ -187,7 +187,7 @@ func (r *StrengthTrainingRepository) FindByID(id shared.TrainingID) (*strength.S
 }
 
 // findExercisesByTrainingID はトレーニングIDでエクササイズを検索します
-func (r *StrengthTrainingRepository) findExercisesByTrainingID(trainingID shared.TrainingID) ([]*strength.Exercise, error) {
+func (r *StrengthRepository) findExercisesByTrainingID(trainingID shared.TrainingID) ([]*strength.Exercise, error) {
 	rows, err := r.db.Query(`
 		SELECT id, name, category 
 		FROM exercises 
@@ -236,7 +236,7 @@ func (r *StrengthTrainingRepository) findExercisesByTrainingID(trainingID shared
 }
 
 // findExercisesByTrainingIDs は複数のトレーニングIDでエクササイズを一括取得します
-func (r *StrengthTrainingRepository) findExercisesByTrainingIDs(trainingIDs []string) (map[string][]*strength.Exercise, error) {
+func (r *StrengthRepository) findExercisesByTrainingIDs(trainingIDs []string) (map[string][]*strength.Exercise, error) {
 	if len(trainingIDs) == 0 {
 		return make(map[string][]*strength.Exercise), nil
 	}
@@ -325,7 +325,7 @@ func (r *StrengthTrainingRepository) findExercisesByTrainingIDs(trainingIDs []st
 }
 
 // findSetsByExerciseID はエクササイズIDでセットを検索します
-func (r *StrengthTrainingRepository) findSetsByExerciseID(exerciseID int64) ([]strength.Set, error) {
+func (r *StrengthRepository) findSetsByExerciseID(exerciseID int64) ([]strength.Set, error) {
 	rows, err := r.db.Query(`
 		SELECT weight_kg, reps, rest_time_seconds, rpe 
 		FROM sets 
@@ -379,7 +379,7 @@ func (r *StrengthTrainingRepository) findSetsByExerciseID(exerciseID int64) ([]s
 }
 
 // findSetsByExerciseIDs は複数のエクササイズIDでセットを一括取得します
-func (r *StrengthTrainingRepository) findSetsByExerciseIDs(exerciseIDs []int64) (map[int64][]strength.Set, error) {
+func (r *StrengthRepository) findSetsByExerciseIDs(exerciseIDs []int64) (map[int64][]strength.Set, error) {
 	if len(exerciseIDs) == 0 {
 		return make(map[int64][]strength.Set), nil
 	}
@@ -449,7 +449,7 @@ func (r *StrengthTrainingRepository) findSetsByExerciseIDs(exerciseIDs []int64) 
 }
 
 // FindByDateRange は指定した期間の筋トレセッションを検索します
-func (r *StrengthTrainingRepository) FindByDateRange(start, end time.Time) ([]*strength.StrengthTraining, error) {
+func (r *StrengthRepository) FindByDateRange(start, end time.Time) ([]*strength.StrengthTraining, error) {
 	// 筋トレセッションを一括取得
 	trainingRows, err := r.db.Query(`
 		SELECT id, date, notes 
@@ -524,14 +524,14 @@ func (r *StrengthTrainingRepository) FindByDateRange(start, end time.Time) ([]*s
 }
 
 // FindByDate は指定した日の筋トレセッションを検索します
-func (r *StrengthTrainingRepository) FindByDate(date time.Time) ([]*strength.StrengthTraining, error) {
+func (r *StrengthRepository) FindByDate(date time.Time) ([]*strength.StrengthTraining, error) {
 	startOfDay := time.Date(date.Year(), date.Month(), date.Day(), 0, 0, 0, 0, date.Location())
 	endOfDay := startOfDay.Add(24 * time.Hour)
 	return r.FindByDateRange(startOfDay, endOfDay)
 }
 
 // FindAll は全ての筋トレセッションを検索します
-func (r *StrengthTrainingRepository) FindAll() ([]*strength.StrengthTraining, error) {
+func (r *StrengthRepository) FindAll() ([]*strength.StrengthTraining, error) {
 	rows, err := r.db.Query(`
 		SELECT id 
 		FROM strength_trainings 
@@ -565,7 +565,7 @@ func (r *StrengthTrainingRepository) FindAll() ([]*strength.StrengthTraining, er
 }
 
 // Update は既存の筋トレセッションを更新します
-func (r *StrengthTrainingRepository) Update(training *strength.StrengthTraining) error {
+func (r *StrengthRepository) Update(training *strength.StrengthTraining) error {
 	tx, err := r.db.Begin()
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
@@ -609,7 +609,7 @@ func (r *StrengthTrainingRepository) Update(training *strength.StrengthTraining)
 }
 
 // Delete は筋トレセッションを削除します
-func (r *StrengthTrainingRepository) Delete(id shared.TrainingID) error {
+func (r *StrengthRepository) Delete(id shared.TrainingID) error {
 	result, err := r.db.Exec(`DELETE FROM strength_trainings WHERE id = ?`, id.String())
 	if err != nil {
 		return fmt.Errorf("failed to delete training: %w", err)
@@ -628,7 +628,7 @@ func (r *StrengthTrainingRepository) Delete(id shared.TrainingID) error {
 }
 
 // ExistsById はIDの筋トレセッションが存在するかチェックします
-func (r *StrengthTrainingRepository) ExistsById(id shared.TrainingID) (bool, error) {
+func (r *StrengthRepository) ExistsById(id shared.TrainingID) (bool, error) {
 	var count int
 	err := r.db.QueryRow(`SELECT COUNT(*) FROM strength_trainings WHERE id = ?`, id.String()).Scan(&count)
 	if err != nil {
@@ -638,7 +638,7 @@ func (r *StrengthTrainingRepository) ExistsById(id shared.TrainingID) (bool, err
 }
 
 // GetPersonalRecordsByExercise はエクササイズ別の自己ベスト（最大重量）を取得します
-func (r *StrengthTrainingRepository) GetPersonalRecordsByExercise(exerciseName strength.ExerciseName) (strength.Weight, error) {
+func (r *StrengthRepository) GetPersonalRecordsByExercise(exerciseName strength.ExerciseName) (strength.Weight, error) {
 	var maxWeightKg sql.NullFloat64
 	err := r.db.QueryRow(`
 		SELECT MAX(s.weight_kg)
@@ -659,7 +659,7 @@ func (r *StrengthTrainingRepository) GetPersonalRecordsByExercise(exerciseName s
 }
 
 // GetProgressAnalysis は指定したエクササイズの進捗分析を取得します
-func (r *StrengthTrainingRepository) GetProgressAnalysis(exerciseName strength.ExerciseName, period time.Duration) (*repository.ProgressAnalysis, error) {
+func (r *StrengthRepository) GetProgressAnalysis(exerciseName strength.ExerciseName, period time.Duration) (*repository.ProgressAnalysis, error) {
 	endDate := time.Now()
 	startDate := endDate.Add(-period)
 
@@ -716,7 +716,7 @@ func (r *StrengthTrainingRepository) GetProgressAnalysis(exerciseName strength.E
 }
 
 // GetTrainingFrequency は指定期間のトレーニング頻度を取得します
-func (r *StrengthTrainingRepository) GetTrainingFrequency(start, end time.Time) (*repository.TrainingFrequency, error) {
+func (r *StrengthRepository) GetTrainingFrequency(start, end time.Time) (*repository.TrainingFrequency, error) {
 	// 総セッション数
 	var totalSessions int
 	err := r.db.QueryRow(`
@@ -760,7 +760,7 @@ func (r *StrengthTrainingRepository) GetTrainingFrequency(start, end time.Time) 
 }
 
 // GetVolumeAnalysis は指定期間のボリューム分析を取得します
-func (r *StrengthTrainingRepository) GetVolumeAnalysis(start, end time.Time) (*repository.VolumeAnalysis, error) {
+func (r *StrengthRepository) GetVolumeAnalysis(start, end time.Time) (*repository.VolumeAnalysis, error) {
 	// 総ボリューム
 	var totalVolume sql.NullFloat64
 	err := r.db.QueryRow(`
@@ -820,7 +820,7 @@ func (r *StrengthTrainingRepository) GetVolumeAnalysis(start, end time.Time) (*r
 }
 
 // GetRecentTrainings は最近のトレーニングを取得します
-func (r *StrengthTrainingRepository) GetRecentTrainings(limit int) ([]*strength.StrengthTraining, error) {
+func (r *StrengthRepository) GetRecentTrainings(limit int) ([]*strength.StrengthTraining, error) {
 	rows, err := r.db.Query(`
 		SELECT id 
 		FROM strength_trainings 
@@ -857,7 +857,7 @@ func (r *StrengthTrainingRepository) GetRecentTrainings(limit int) ([]*strength.
 // ヘルパーメソッド
 
 // getWeightAtDate は指定日付での重量を取得します
-func (r *StrengthTrainingRepository) getWeightAtDate(exerciseName strength.ExerciseName, date time.Time, after bool) (strength.Weight, error) {
+func (r *StrengthRepository) getWeightAtDate(exerciseName strength.ExerciseName, date time.Time, after bool) (strength.Weight, error) {
 	var query string
 	if after {
 		query = `
@@ -896,7 +896,7 @@ func (r *StrengthTrainingRepository) getWeightAtDate(exerciseName strength.Exerc
 }
 
 // getVolumeAtDate は指定日付でのボリュームを取得します
-func (r *StrengthTrainingRepository) getVolumeAtDate(exerciseName strength.ExerciseName, date time.Time, after bool) (float64, error) {
+func (r *StrengthRepository) getVolumeAtDate(exerciseName strength.ExerciseName, date time.Time, after bool) (float64, error) {
 	var query string
 	if after {
 		query = `
@@ -935,7 +935,7 @@ func (r *StrengthTrainingRepository) getVolumeAtDate(exerciseName strength.Exerc
 }
 
 // getSessionCount は指定期間のセッション数を取得します
-func (r *StrengthTrainingRepository) getSessionCount(exerciseName strength.ExerciseName, start, end time.Time) (int, error) {
+func (r *StrengthRepository) getSessionCount(exerciseName strength.ExerciseName, start, end time.Time) (int, error) {
 	var count int
 	err := r.db.QueryRow(`
 		SELECT COUNT(DISTINCT st.id)
@@ -947,7 +947,7 @@ func (r *StrengthTrainingRepository) getSessionCount(exerciseName strength.Exerc
 }
 
 // calculateTrend は改善トレンドを計算します
-func (r *StrengthTrainingRepository) calculateTrend(start, end float64) string {
+func (r *StrengthRepository) calculateTrend(start, end float64) string {
 	diff := end - start
 	threshold := 0.01 // 1%の閾値
 
@@ -960,7 +960,7 @@ func (r *StrengthTrainingRepository) calculateTrend(start, end float64) string {
 }
 
 // getMostActiveWeekday は最もアクティブな曜日を取得します
-func (r *StrengthTrainingRepository) getMostActiveWeekday(start, end time.Time) (string, error) {
+func (r *StrengthRepository) getMostActiveWeekday(start, end time.Time) (string, error) {
 	rows, err := r.db.Query(`
 		SELECT 
 			strftime('%w', date) as weekday,
@@ -989,7 +989,7 @@ func (r *StrengthTrainingRepository) getMostActiveWeekday(start, end time.Time) 
 }
 
 // getVolumeByExercise はエクササイズ別ボリュームを取得します
-func (r *StrengthTrainingRepository) getVolumeByExercise(start, end time.Time) (map[string]float64, error) {
+func (r *StrengthRepository) getVolumeByExercise(start, end time.Time) (map[string]float64, error) {
 	rows, err := r.db.Query(`
 		SELECT 
 			e.name,
@@ -1020,7 +1020,7 @@ func (r *StrengthTrainingRepository) getVolumeByExercise(start, end time.Time) (
 }
 
 // getVolumeByWeek は週次ボリュームを取得します
-func (r *StrengthTrainingRepository) getVolumeByWeek(start, end time.Time) ([]repository.WeeklyVolume, error) {
+func (r *StrengthRepository) getVolumeByWeek(start, end time.Time) ([]repository.WeeklyVolume, error) {
 	rows, err := r.db.Query(`
 		SELECT 
 			strftime('%Y-%W', st.date) as week_string,
@@ -1065,7 +1065,7 @@ func (r *StrengthTrainingRepository) getVolumeByWeek(start, end time.Time) ([]re
 }
 
 // calculateVolumeGrowthRate は週次ボリューム成長率を計算します
-func (r *StrengthTrainingRepository) calculateVolumeGrowthRate(volumeByWeek []repository.WeeklyVolume) float64 {
+func (r *StrengthRepository) calculateVolumeGrowthRate(volumeByWeek []repository.WeeklyVolume) float64 {
 	if len(volumeByWeek) < 2 {
 		return 0
 	}
@@ -1094,6 +1094,198 @@ func (r *StrengthTrainingRepository) calculateVolumeGrowthRate(volumeByWeek []re
 	return 0
 }
 
+// GetPersonalRecords は個人記録を取得します
+func (r *StrengthRepository) GetPersonalRecords(exerciseName *string) ([]repository.PersonalRecordResult, error) {
+	query := `
+	WITH exercise_stats AS (
+		SELECT 
+			e.name as exercise_name,
+			e.category,
+			COUNT(DISTINCT st.id) as total_sessions,
+			MAX(st.date) as last_performed
+		FROM exercises e
+		JOIN sets s ON e.id = s.exercise_id
+		JOIN strength_trainings st ON e.training_id = st.id
+		WHERE ($1 IS NULL OR e.name = $1)
+		GROUP BY e.name, e.category
+	),
+	max_weight_details AS (
+		SELECT DISTINCT
+			e.name as exercise_name,
+			s.weight_kg,
+			s.reps,
+			s.rest_time_seconds,
+			s.rpe,
+			st.date,
+			st.id as training_id,
+			ROW_NUMBER() OVER (PARTITION BY e.name ORDER BY s.weight_kg DESC, st.date DESC) as rn
+		FROM exercises e
+		JOIN sets s ON e.id = s.exercise_id
+		JOIN strength_trainings st ON e.training_id = st.id
+		WHERE ($1 IS NULL OR e.name = $1)
+	),
+	max_reps_details AS (
+		SELECT DISTINCT
+			e.name as exercise_name,
+			s.weight_kg,
+			s.reps,
+			s.rest_time_seconds,
+			s.rpe,
+			st.date,
+			st.id as training_id,
+			ROW_NUMBER() OVER (PARTITION BY e.name ORDER BY s.reps DESC, st.date DESC) as rn
+		FROM exercises e
+		JOIN sets s ON e.id = s.exercise_id
+		JOIN strength_trainings st ON e.training_id = st.id
+		WHERE ($1 IS NULL OR e.name = $1)
+	),
+	max_volume_details AS (
+		SELECT DISTINCT
+			e.name as exercise_name,
+			s.weight_kg,
+			s.reps,
+			s.rest_time_seconds,
+			s.rpe,
+			st.date,
+			st.id as training_id,
+			(s.weight_kg * s.reps) as volume,
+			ROW_NUMBER() OVER (PARTITION BY e.name ORDER BY (s.weight_kg * s.reps) DESC, st.date DESC) as rn
+		FROM exercises e
+		JOIN sets s ON e.id = s.exercise_id
+		JOIN strength_trainings st ON e.training_id = st.id
+		WHERE ($1 IS NULL OR e.name = $1)
+	)
+	SELECT 
+		es.exercise_name,
+		es.category,
+		COALESCE(mwd.weight_kg, 0) as max_weight,
+		COALESCE(mwd.date, '1970-01-01') as max_weight_date,
+		COALESCE(mwd.training_id, '') as max_weight_training_id,
+		COALESCE(mwd.weight_kg, 0) as max_weight_details_weight,
+		COALESCE(mwd.reps, 0) as max_weight_details_reps,
+		COALESCE(mwd.rest_time_seconds, 0) as max_weight_details_rest,
+		mwd.rpe as max_weight_details_rpe,
+		COALESCE(mrd.reps, 0) as max_reps,
+		COALESCE(mrd.date, '1970-01-01') as max_reps_date,
+		COALESCE(mrd.training_id, '') as max_reps_training_id,
+		COALESCE(mrd.weight_kg, 0) as max_reps_details_weight,
+		COALESCE(mrd.reps, 0) as max_reps_details_reps,
+		COALESCE(mrd.rest_time_seconds, 0) as max_reps_details_rest,
+		mrd.rpe as max_reps_details_rpe,
+		COALESCE(mvd.volume, 0) as max_volume,
+		COALESCE(mvd.date, '1970-01-01') as max_volume_date,
+		COALESCE(mvd.training_id, '') as max_volume_training_id,
+		COALESCE(mvd.weight_kg, 0) as max_volume_details_weight,
+		COALESCE(mvd.reps, 0) as max_volume_details_reps,
+		COALESCE(mvd.rest_time_seconds, 0) as max_volume_details_rest,
+		mvd.rpe as max_volume_details_rpe,
+		es.total_sessions,
+		es.last_performed
+	FROM exercise_stats es
+	LEFT JOIN max_weight_details mwd ON es.exercise_name = mwd.exercise_name AND mwd.rn = 1
+	LEFT JOIN max_reps_details mrd ON es.exercise_name = mrd.exercise_name AND mrd.rn = 1
+	LEFT JOIN max_volume_details mvd ON es.exercise_name = mvd.exercise_name AND mvd.rn = 1
+	ORDER BY es.exercise_name;`
+
+	rows, err := r.db.Query(query, exerciseName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query personal records: %w", err)
+	}
+	defer rows.Close()
+
+	var records []repository.PersonalRecordResult
+	for rows.Next() {
+		var record repository.PersonalRecordResult
+		var maxWeightDetails, maxRepsDetails, maxVolumeDetails repository.SetDetails
+		var maxWeightDetailsRPE, maxRepsDetailsRPE, maxVolumeDetailsRPE sql.NullInt64
+		
+		// 日付を文字列として受け取る
+		var maxWeightDateStr, maxRepsDateStr, maxVolumeDateStr, lastPerformedStr string
+
+		err := rows.Scan(
+			&record.ExerciseName,
+			&record.Category,
+			&record.MaxWeight.Value,
+			&maxWeightDateStr,
+			&record.MaxWeight.TrainingID,
+			&maxWeightDetails.WeightKg,
+			&maxWeightDetails.Reps,
+			&maxWeightDetails.RestTimeSeconds,
+			&maxWeightDetailsRPE,
+			&record.MaxReps.Value,
+			&maxRepsDateStr,
+			&record.MaxReps.TrainingID,
+			&maxRepsDetails.WeightKg,
+			&maxRepsDetails.Reps,
+			&maxRepsDetails.RestTimeSeconds,
+			&maxRepsDetailsRPE,
+			&record.MaxVolume.Value,
+			&maxVolumeDateStr,
+			&record.MaxVolume.TrainingID,
+			&maxVolumeDetails.WeightKg,
+			&maxVolumeDetails.Reps,
+			&maxVolumeDetails.RestTimeSeconds,
+			&maxVolumeDetailsRPE,
+			&record.TotalSessions,
+			&lastPerformedStr,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan personal record: %w", err)
+		}
+
+		// 日付文字列をtime.Timeに変換
+		if maxWeightDate, err := time.Parse("2006-01-02 15:04:05", maxWeightDateStr); err == nil {
+			record.MaxWeight.Date = maxWeightDate
+		} else if maxWeightDate, err := time.Parse("2006-01-02", maxWeightDateStr); err == nil {
+			record.MaxWeight.Date = maxWeightDate
+		}
+
+		if maxRepsDate, err := time.Parse("2006-01-02 15:04:05", maxRepsDateStr); err == nil {
+			record.MaxReps.Date = maxRepsDate
+		} else if maxRepsDate, err := time.Parse("2006-01-02", maxRepsDateStr); err == nil {
+			record.MaxReps.Date = maxRepsDate
+		}
+
+		if maxVolumeDate, err := time.Parse("2006-01-02 15:04:05", maxVolumeDateStr); err == nil {
+			record.MaxVolume.Date = maxVolumeDate
+		} else if maxVolumeDate, err := time.Parse("2006-01-02", maxVolumeDateStr); err == nil {
+			record.MaxVolume.Date = maxVolumeDate
+		}
+
+		if lastPerformed, err := time.Parse("2006-01-02 15:04:05", lastPerformedStr); err == nil {
+			record.LastPerformed = lastPerformed
+		} else if lastPerformed, err := time.Parse("2006-01-02", lastPerformedStr); err == nil {
+			record.LastPerformed = lastPerformed
+		}
+
+		// RPEの設定（NULL許可のため）
+		if maxWeightDetailsRPE.Valid {
+			rpe := int(maxWeightDetailsRPE.Int64)
+			maxWeightDetails.RPE = &rpe
+		}
+		if maxRepsDetailsRPE.Valid {
+			rpe := int(maxRepsDetailsRPE.Int64)
+			maxRepsDetails.RPE = &rpe
+		}
+		if maxVolumeDetailsRPE.Valid {
+			rpe := int(maxVolumeDetailsRPE.Int64)
+			maxVolumeDetails.RPE = &rpe
+		}
+
+		// セット詳細の設定
+		record.MaxWeight.SetDetails = &maxWeightDetails
+		record.MaxReps.SetDetails = &maxRepsDetails
+		record.MaxVolume.SetDetails = &maxVolumeDetails
+
+		records = append(records, record)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("failed to iterate personal records: %w", err)
+	}
+
+	return records, nil
+}
+
 // コンパイル時のインターフェース実装チェック
-var _ repository.StrengthTrainingRepository = (*StrengthTrainingRepository)(nil)
-var _ repository.StrengthTrainingQueryRepository = (*StrengthTrainingRepository)(nil)
+var _ repository.StrengthTrainingRepository = (*StrengthRepository)(nil)

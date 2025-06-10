@@ -35,6 +35,9 @@ type StrengthTrainingRepository interface {
 
 	// ExistsById はIDの筋トレセッションが存在するかチェックします
 	ExistsById(id shared.TrainingID) (bool, error)
+
+	// GetPersonalRecords は個人記録を取得します
+	GetPersonalRecords(exerciseName *string) ([]PersonalRecordResult, error)
 }
 
 // StrengthTrainingQueryRepository は筋トレデータの読み取り専用操作を担当するインターフェース
@@ -53,6 +56,9 @@ type StrengthTrainingQueryRepository interface {
 
 	// GetRecentTrainings は最近のトレーニングを取得します
 	GetRecentTrainings(limit int) ([]*strength.StrengthTraining, error)
+
+	// GetPersonalRecords は個人記録を取得します
+	GetPersonalRecords(exerciseName *string) ([]PersonalRecordResult, error)
 }
 
 // TODO: 以下の構造体は本来はドメインに持つのが望ましいのではないかと思われる（もしくはリポジトリを呼び出すユースケース）
@@ -97,4 +103,31 @@ type WeeklyVolume struct {
 	Week   int // 週番号
 	Volume float64
 	Date   time.Time // その週の開始日
+}
+
+// TODO: リポジトリ専用を置く必要があるのかは少し微妙な気がするので後で検討する
+type PersonalRecordResult struct {
+	ExerciseName  string
+	Category      string
+	MaxWeight     PersonalRecordDetail
+	MaxReps       PersonalRecordDetail
+	MaxVolume     PersonalRecordDetail
+	TotalSessions int
+	LastPerformed time.Time
+}
+
+// PersonalRecordDetail は記録詳細（Repository層用）
+type PersonalRecordDetail struct {
+	Value      float64
+	Date       time.Time
+	TrainingID string
+	SetDetails *SetDetails
+}
+
+// SetDetails はセット詳細（Repository層用）
+type SetDetails struct {
+	WeightKg        float64
+	Reps            int
+	RestTimeSeconds int
+	RPE             *int
 }
