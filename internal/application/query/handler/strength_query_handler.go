@@ -12,7 +12,10 @@ type StrengthQueryHandler struct {
 }
 
 // NewStrengthQueryHandler は新しいStrengthQueryHandlerを作成します
-func NewStrengthQueryHandler(usecase usecase.StrengthQueryUsecase, personalRecordsUC usecase.PersonalRecordsUsecase) *StrengthQueryHandler {
+func NewStrengthQueryHandler(
+	usecase usecase.StrengthQueryUsecase,
+	personalRecordsUC usecase.PersonalRecordsUsecase,
+) *StrengthQueryHandler {
 	return &StrengthQueryHandler{
 		usecase:           usecase,
 		personalRecordsUC: personalRecordsUC,
