@@ -44,16 +44,130 @@ func main() {
 
 	// ToolHandlerFuncのラップ
 	toolHandlerFunc := func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		// 必須パラメータ取得
-		fitness, err := req.RequireString("fitness")
-		if err != nil {
-			return mcp.NewToolResultError("fitnessパラメータが必要です: " + err.Error()), nil
+		// パラメータマップの取得
+		paramsMap, ok := req.Params.Arguments.(map[string]interface{})
+		if !ok {
+			return mcp.NewToolResultError("パラメータが不正です"), nil
 		}
 
-		// RecordTrainingCommandのNotesにfitnessを入れる（最低限の例）
+		// 日付の取得
+		dateStr, err := req.RequireString("date")
+		if err != nil {
+			return mcp.NewToolResultError("dateパラメータが必要です: " + err.Error()), nil
+		}
+		
+		date, err := time.Parse("2006-01-02", dateStr)
+		if err != nil {
+			return mcp.NewToolResultError("日付の形式が不正です（YYYY-MM-DD形式で入力してください）: " + err.Error()), nil
+		}
+
+		// エクササイズの取得
+		exercisesData, ok := paramsMap["exercises"]
+		if !ok {
+			return mcp.NewToolResultError("exercisesパラメータが必要です"), nil
+		}
+
+		exercisesSlice, ok := exercisesData.([]interface{})
+		if !ok {
+			return mcp.NewToolResultError("exercisesは配列である必要があります"), nil
+		}
+
+		var exercises []dto.ExerciseDTO
+		for _, exerciseData := range exercisesSlice {
+			exerciseMap, ok := exerciseData.(map[string]interface{})
+			if !ok {
+				return mcp.NewToolResultError("exercise要素が不正です"), nil
+			}
+
+			// エクササイズ名とカテゴリの取得
+			name, ok := exerciseMap["name"].(string)
+			if !ok {
+				return mcp.NewToolResultError("exercise nameが必要です"), nil
+			}
+			
+			category, ok := exerciseMap["category"].(string)
+			if !ok {
+				return mcp.NewToolResultError("exercise categoryが必要です"), nil
+			}
+
+			// セットの取得
+			setsData, ok := exerciseMap["sets"]
+			if !ok {
+				return mcp.NewToolResultError("setsが必要です"), nil
+			}
+
+			setsSlice, ok := setsData.([]interface{})
+			if !ok {
+				return mcp.NewToolResultError("setsは配列である必要があります"), nil
+			}
+
+			var sets []dto.SetDTO
+			for _, setData := range setsSlice {
+				setMap, ok := setData.(map[string]interface{})
+				if !ok {
+					return mcp.NewToolResultError("set要素が不正です"), nil
+				}
+
+				// 重量、回数、休憩時間の取得
+				weightKg, ok := setMap["weight_kg"].(float64)
+				if !ok {
+					return mcp.NewToolResultError("weight_kgが必要です"), nil
+				}
+
+				repsFloat, ok := setMap["reps"].(float64)
+				if !ok {
+					return mcp.NewToolResultError("repsが必要です"), nil
+				}
+				reps := int(repsFloat)
+
+				restTimeFloat, ok := setMap["rest_time_seconds"].(float64)
+				if !ok {
+					return mcp.NewToolResultError("rest_time_secondsが必要です"), nil
+				}
+				restTime := int(restTimeFloat)
+
+				// RPE（オプション）
+				var rpe *int
+				if rpeData, exists := setMap["rpe"]; exists {
+					if rpeFloat, ok := rpeData.(float64); ok {
+						rpeInt := int(rpeFloat)
+						rpe = &rpeInt
+					}
+				}
+
+				sets = append(sets, dto.SetDTO{
+					WeightKg:        weightKg,
+					Reps:            reps,
+					RestTimeSeconds: restTime,
+					RPE:             rpe,
+				})
+			}
+
+			exercises = append(exercises, dto.ExerciseDTO{
+				Name:     name,
+				Category: category,
+				Sets:     sets,
+			})
+		}
+
+		// ノート（オプション）
+		notes := ""
+		if notesData, exists := paramsMap["notes"]; exists {
+			if notesStr, ok := notesData.(string); ok {
+				notes = notesStr
+			}
+		}
+
+		// RecordTrainingCommandの作成
 		cmd := dto.RecordTrainingCommand{
-			Notes: fitness,
-			// DateやExercisesは本来必須だが、ここでは省略（本番では要対応）
+			Date:      date,
+			Exercises: exercises,
+			Notes:     notes,
+		}
+
+		// バリデーション
+		if err := cmd.Validate(); err != nil {
+			return mcp.NewToolResultError("データが不正です: " + err.Error()), nil
 		}
 
 		result, err := commandHandler.RecordTraining(cmd)
@@ -76,11 +190,18 @@ func main() {
 
 	// ツールの登録
 	tool := mcp.NewTool(
-		"筋トレ記録ツール",
+		"record_training",
 		mcp.WithDescription("筋トレの記録を管理するツール"),
-		mcp.WithString("fitness",
+		mcp.WithString("date",
 			mcp.Required(),
-			mcp.Description("筋トレの種類?"),
+			mcp.Description("トレーニング日付（YYYY-MM-DD形式）"),
+		),
+		mcp.WithObject("exercises",
+			mcp.Required(),
+			mcp.Description("エクササイズの配列"),
+		),
+		mcp.WithString("notes",
+			mcp.Description("メモ（オプション）"),
 		),
 	)
 

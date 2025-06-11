@@ -44,14 +44,21 @@ func getDefaultDatabasePath() string {
 		return filepath.Join(dataDir, "fitness.db")
 	}
 	
-	// ホームディレクトリの.local/share/fitness-mcpディレクトリに配置
-	homeDir, err := os.UserHomeDir()
+	// 実行ファイルのディレクトリを基準にしたパスを取得
+	execPath, err := os.Executable()
 	if err != nil {
-		// フォールバック: 一時ディレクトリを使用
-		return filepath.Join(os.TempDir(), "fitness-mcp", "fitness.db")
+		// 実行ファイルパスの取得に失敗した場合は現在の作業ディレクトリを使用
+		workDir, err := os.Getwd()
+		if err != nil {
+			// 最後のフォールバック: 一時ディレクトリを使用
+			return filepath.Join(os.TempDir(), "fitness-mcp", "fitness.db")
+		}
+		return filepath.Join(workDir, "data", "fitness.db")
 	}
 	
-	return filepath.Join(homeDir, ".local", "share", "fitness-mcp", "fitness.db")
+	// 実行ファイルのディレクトリ配下の data/fitness.db を使用
+	execDir := filepath.Dir(execPath)
+	return filepath.Join(execDir, "data", "fitness.db")
 }
 
 // EnsureDatabaseDir はデータベースディレクトリが存在することを確認します
