@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"fitness-mcp-server/internal/application/query/dto"
-	"fitness-mcp-server/internal/interface/repository"
+	"fitness-mcp-server/internal/interface/query"
 )
 
 // StrengthQueryUsecase は筋トレデータの読み取り系ユースケースインターフェース
@@ -15,13 +15,13 @@ type StrengthQueryUsecase interface {
 
 // strengthQueryUsecaseImpl はStrengthQueryUsecaseの実装
 type strengthQueryUsecaseImpl struct {
-	repo repository.StrengthTrainingRepository
+	queryService query.StrengthQueryService
 }
 
 // NewStrengthQueryUsecase は新しいStrengthQueryUsecaseを作成します
-func NewStrengthQueryUsecase(repo repository.StrengthTrainingRepository) StrengthQueryUsecase {
+func NewStrengthQueryUsecase(queryService query.StrengthQueryService) StrengthQueryUsecase {
 	return &strengthQueryUsecaseImpl{
-		repo: repo,
+		queryService: queryService,
 	}
 }
 
@@ -38,8 +38,8 @@ func (u *strengthQueryUsecaseImpl) GetTrainingsByDateRange(query dto.GetTraining
 		return nil, fmt.Errorf("period too long: maximum 1 year allowed")
 	}
 
-	// リポジトリからデータを取得
-	trainings, err := u.repo.FindByDateRange(query.StartDate, query.EndDate)
+	// クエリサービスからデータを取得
+	trainings, err := u.queryService.FindByDateRange(query.StartDate, query.EndDate)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get trainings by date range: %w", err)
 	}

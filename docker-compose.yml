@@ -1,0 +1,33 @@
+services:
+  # 開発・テスト用（パイプライン入力対応）
+  fitness-mcp:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ./data:/app/data
+    environment:
+      - MCP_DATA_DIR=/app/data
+    # パイプライン入力用の設定
+    stdin_open: true
+    tty: false
+
+  # 開発用（インタラクティブ用）
+  fitness-mcp-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: fitness-mcp-server-dev
+    volumes:
+      # 開発時のソースコードマウント
+      - ./:/app/src
+      - ./data:/app/data
+    environment:
+      - MCP_DATA_DIR=/app/data
+      - GO_ENV=development
+    tty: true
+    stdin_open: true
+    # シェルでの作業用
+    command: ["sh"]
+    profiles:
+      - dev

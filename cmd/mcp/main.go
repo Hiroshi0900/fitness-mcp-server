@@ -2,14 +2,16 @@ package main
 
 import (
 	"context"
-	"fitness-mcp-server/internal/application/command"
-	"fitness-mcp-server/internal/application/dto"
+	"database/sql"
+	"fitness-mcp-server/internal/application/command/handler"
+	"fitness-mcp-server/internal/application/command/dto"
 	query_dto "fitness-mcp-server/internal/application/query/dto"
 	query_handler "fitness-mcp-server/internal/application/query/handler"
 	query_usecase "fitness-mcp-server/internal/application/query/usecase"
-	"fitness-mcp-server/internal/application/usecase"
+	command_usecase "fitness-mcp-server/internal/application/command/usecase"
 	"fitness-mcp-server/internal/config"
 	"fitness-mcp-server/internal/infrastructure/repository/sqlite"
+	sqlite_query "fitness-mcp-server/internal/infrastructure/query/sqlite"
 	"fitness-mcp-server/internal/interface/repository"
 	"fmt"
 	"log"
@@ -17,6 +19,7 @@ import (
 
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
+	_ "modernc.org/sqlite"
 )
 
 func main() {
@@ -33,13 +36,19 @@ func main() {
 		log.Fatalf("Failed to initialize strength repository: %v", err)
 	}
 
+	// クエリサービスを初期化
+	queryService, err := initializeStrengthQueryService(cfg.Database.SQLitePath)
+	if err != nil {
+		log.Fatalf("Failed to initialize strength query service: %v", err)
+	}
+
 	// Command系の初期化
-	commandUsecase := usecase.NewStrengthTrainingUsecase(repo)
-	commandHandler := command.NewStrengthCommandHandler(commandUsecase)
+	commandUsecase := command_usecase.NewStrengthTrainingUsecase(repo)
+	commandHandler := handler.NewStrengthCommandHandler(commandUsecase)
 
 	// Query系の初期化
-	queryUsecase := query_usecase.NewStrengthQueryUsecase(repo)
-	personalRecordsUsecase := query_usecase.NewPersonalRecordsUsecase(repo)
+	queryUsecase := query_usecase.NewStrengthQueryUsecase(queryService)
+	personalRecordsUsecase := query_usecase.NewPersonalRecordsUsecase(queryService)
 	queryHandler := query_handler.NewStrengthQueryHandler(queryUsecase, personalRecordsUsecase)
 
 	// ToolHandlerFuncのラップ
@@ -367,6 +376,26 @@ func initializeStrengthRepository(dbPath string) (repository.StrengthTrainingRep
 
 	log.Printf("Initialized SQLite repository at: %s", dbPath)
 	return repo, nil
+}
+
+// initializeStrengthQueryService はStrengthQueryServiceを初期化します
+func initializeStrengthQueryService(dbPath string) (*sqlite_query.StrengthQueryService, error) {
+	// データベース接続を開く
+	db, err := sql.Open("sqlite", dbPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open database: %w", err)
+	}
+
+	// SQLiteの設定
+	db.SetMaxOpenConns(10)           // 複数接続を許可
+	db.SetMaxIdleConns(2)            // アイドル接続数
+	db.SetConnMaxLifetime(time.Hour) // 接続の最大生存時間
+
+	// SQLiteクエリサービスを作成
+	queryService := sqlite_query.NewStrengthQueryService(db)
+
+	log.Printf("Initialized SQLite query service at: %s", dbPath)
+	return queryService, nil
 }
 
 // formatQueryResponse はクエリレスポンスを見やすい形式にフォーマットします（簡略版）

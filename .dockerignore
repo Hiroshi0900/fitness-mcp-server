@@ -1,0 +1,43 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Documentation
+README.md
+TASK.md
+*.md
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Testing
+test/
+*_test.go
+
+# Build artifacts
+fitness-mcp-server
+mcp-server
+*.exe
+
+# Scripts
+*.sh
+
+# Docker
+docker-compose.yml
+Dockerfile
+.dockerignore
+
+# Logs
+*.log
+
+# Temporary files
+tmp/
+temp/
