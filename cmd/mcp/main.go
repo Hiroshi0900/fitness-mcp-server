@@ -9,7 +9,7 @@ import (
 	"fitness-mcp-server/internal/config"
 	sqlite_query "fitness-mcp-server/internal/infrastructure/query/sqlite"
 	"fitness-mcp-server/internal/infrastructure/repository/sqlite"
-	"fitness-mcp-server/internal/interface/mcp/tool"
+	"fitness-mcp-server/internal/interface/mcp-tool/tool"
 	"fitness-mcp-server/internal/interface/repository"
 	"fmt"
 	"log"
