@@ -1,0 +1,35 @@
+# ビルド成果物
+mcp-server
+mcp
+*.exe
+
+# データベースファイル（必要に応じてコメントアウト）
+# data/*.db
+
+# macOSシステムファイル
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDEファイル
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Goファイル
+*.out
+coverage.txt
+vendor/
+
+# ログファイル
+*.log
+
+# 一時ファイル
+tmp/
+temp/

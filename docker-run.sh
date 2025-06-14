@@ -32,7 +32,6 @@ show_usage() {
     echo "  restart   - MCPサーバーを再起動する"
     echo "  logs      - ログを表示する"
     echo "  dev       - 開発モード（シェル）で起動する"
-    echo "  test      - MCPサーバーでテストを実行する"
     echo "  clean     - 停止してイメージを削除する"
     echo "  status    - 現在の状態を確認する"
     echo "  help      - このヘルプを表示する"
@@ -102,18 +101,7 @@ start_dev() {
     docker-compose --profile dev run --rm fitness-mcp-dev
 }
 
-# テスト実行
-run_test() {
-    ensure_data_directory
-    log_info "MCPサーバーでテストを実行します..."
-    
-    # テストJSON
-    TEST_JSON='{"jsonrpc": "2.0", "id": 1, "method": "tools/call", "params": {"name": "record_training", "arguments": {"date": "2025-06-13", "exercises": [{"name": "ベンチプレス", "category": "Compound", "sets": [{"weight_kg": 95, "reps": 8, "rest_time_seconds": 180}]}], "notes": "テスト実行"}}}'
-    
-    log_info "記録テストを実行中..."
-    echo "$TEST_JSON" | docker-compose run --rm -T fitness-mcp
-    log_success "テスト完了"
-}
+# テスト実行機能を削除（docker-test.shに統合）
 
 # クリーンアップ
 clean_up() {
@@ -160,9 +148,6 @@ main() {
             ;;
         dev)
             start_dev
-            ;;
-        test)
-            run_test
             ;;
         clean)
             clean_up
