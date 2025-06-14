@@ -11,17 +11,17 @@ import (
 
 // RecordTrainingCommand は筋トレセッション記録コマンドDTO
 type RecordTrainingCommand struct {
-	Date      time.Time        `json:"date"`
-	Exercises []ExerciseDTO    `json:"exercises"`
-	Notes     string           `json:"notes"`
+	Date      time.Time     `json:"date"`
+	Exercises []ExerciseDTO `json:"exercises"`
+	Notes     string        `json:"notes"`
 }
 
 // UpdateTrainingCommand は筋トレセッション更新コマンドDTO
 type UpdateTrainingCommand struct {
-	ID        string           `json:"id"`
-	Date      time.Time        `json:"date"`
-	Exercises []ExerciseDTO    `json:"exercises"`
-	Notes     string           `json:"notes"`
+	ID        string        `json:"id"`
+	Date      time.Time     `json:"date"`
+	Exercises []ExerciseDTO `json:"exercises"`
+	Notes     string        `json:"notes"`
 }
 
 // DeleteTrainingCommand は筋トレセッション削除コマンドDTO
@@ -31,9 +31,9 @@ type DeleteTrainingCommand struct {
 
 // ExerciseDTO はエクササイズDTO
 type ExerciseDTO struct {
-	Name     string    `json:"name"`
-	Category string    `json:"category"`
-	Sets     []SetDTO  `json:"sets"`
+	Name     string   `json:"name"`
+	Category string   `json:"category"`
+	Sets     []SetDTO `json:"sets"`
 }
 
 // SetDTO はセットDTO

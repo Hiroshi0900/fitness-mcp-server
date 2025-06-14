@@ -43,7 +43,7 @@ func getDefaultDatabasePath() string {
 	if dataDir := os.Getenv("MCP_DATA_DIR"); dataDir != "" {
 		return filepath.Join(dataDir, "fitness.db")
 	}
-	
+
 	// 実行ファイルのディレクトリを基準にしたパスを取得
 	execPath, err := os.Executable()
 	if err != nil {
@@ -55,7 +55,7 @@ func getDefaultDatabasePath() string {
 		}
 		return filepath.Join(workDir, "data", "fitness.db")
 	}
-	
+
 	// 実行ファイルのディレクトリ配下の data/fitness.db を使用
 	execDir := filepath.Dir(execPath)
 	return filepath.Join(execDir, "data", "fitness.db")

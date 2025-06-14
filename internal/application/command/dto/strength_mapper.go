@@ -132,7 +132,7 @@ func (dto *SetDTO) ToSet() (strength.Set, error) {
 // FromStrengthTraining はStrengthTrainingエンティティからTrainingSessionDTOを生成します
 func FromStrengthTraining(training *strength.StrengthTraining) *TrainingSessionDTO {
 	exercises := make([]ExerciseDTO, 0, len(training.Exercises()))
-	
+
 	for _, exercise := range training.Exercises() {
 		exerciseDTO := FromExercise(exercise)
 		exercises = append(exercises, *exerciseDTO)
@@ -151,7 +151,7 @@ func FromStrengthTraining(training *strength.StrengthTraining) *TrainingSessionD
 // FromExercise はExerciseエンティティからExerciseDTOを生成します
 func FromExercise(exercise *strength.Exercise) *ExerciseDTO {
 	sets := make([]SetDTO, 0, len(exercise.Sets()))
-	
+
 	for _, set := range exercise.Sets() {
 		setDTO := FromSet(set)
 		sets = append(sets, *setDTO)

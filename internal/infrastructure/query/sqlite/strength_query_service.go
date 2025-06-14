@@ -293,7 +293,7 @@ func (s *StrengthQueryService) GetPersonalRecords(exerciseName *string) ([]dto.P
 		var record dto.PersonalRecordQueryResult
 		var maxWeightDetails, maxRepsDetails, maxVolumeDetails dto.SetQueryDetails
 		var maxWeightDetailsRPE, maxRepsDetailsRPE, maxVolumeDetailsRPE sql.NullInt64
-		
+
 		// 日付を文字列として受け取る
 		var maxWeightDateStr, maxRepsDateStr, maxVolumeDateStr, lastPerformedStr string
 

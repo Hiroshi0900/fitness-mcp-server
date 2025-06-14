@@ -25,11 +25,11 @@ type GetTrainingsByDateRangeResponse struct {
 
 // TrainingDTO はトレーニングセッションのDTO
 type TrainingDTO struct {
-	ID        string       `json:"id"`
-	Date      time.Time    `json:"date"`
+	ID        string         `json:"id"`
+	Date      time.Time      `json:"date"`
 	Exercises []*ExerciseDTO `json:"exercises"`
-	Notes     string       `json:"notes"`
-	Summary   *SummaryDTO  `json:"summary"`
+	Notes     string         `json:"notes"`
+	Summary   *SummaryDTO    `json:"summary"`
 }
 
 // ExerciseDTO はエクササイズのDTO
@@ -42,9 +42,9 @@ type ExerciseDTO struct {
 // SetDTO はセットのDTO
 type SetDTO struct {
 	WeightKg        float64 `json:"weight_kg"`
-	Reps           int     `json:"reps"`
+	Reps            int     `json:"reps"`
 	RestTimeSeconds int     `json:"rest_time_seconds"`
-	RPE            *int    `json:"rpe,omitempty"`
+	RPE             *int    `json:"rpe,omitempty"`
 }
 
 // SummaryDTO はトレーニングセッションの概要DTO
@@ -98,7 +98,7 @@ func ExerciseToDTO(exercise *strength.Exercise) *ExerciseDTO {
 func SetToDTO(set strength.Set) *SetDTO {
 	dto := &SetDTO{
 		WeightKg:        set.Weight().Kg(),
-		Reps:           set.Reps().Count(),
+		Reps:            set.Reps().Count(),
 		RestTimeSeconds: int(set.RestTime().Duration().Seconds()),
 	}
 

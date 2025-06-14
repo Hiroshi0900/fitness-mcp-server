@@ -31,7 +31,7 @@ func (u *strengthQueryUsecaseImpl) GetTrainingsByDateRange(query dto.GetTraining
 	if query.StartDate.After(query.EndDate) {
 		return nil, fmt.Errorf("start date must be before or equal to end date")
 	}
-	
+
 	// 期間制限チェック（最大1年間）
 	maxPeriod := 365 * 24 * time.Hour // 1年
 	if query.EndDate.Sub(query.StartDate) > maxPeriod {

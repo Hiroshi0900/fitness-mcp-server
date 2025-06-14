@@ -146,7 +146,7 @@ func (rs *RunningSession) UpdateDistance(distance Distance, duration Duration) e
 	if err != nil {
 		return fmt.Errorf("failed to calculate pace: %w", err)
 	}
-	
+
 	rs.distance = distance
 	rs.duration = duration
 	rs.pace = pace

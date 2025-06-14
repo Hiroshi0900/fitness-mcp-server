@@ -3,15 +3,15 @@ package main
 import (
 	"context"
 	"database/sql"
-	"fitness-mcp-server/internal/application/command/handler"
 	"fitness-mcp-server/internal/application/command/dto"
+	"fitness-mcp-server/internal/application/command/handler"
+	command_usecase "fitness-mcp-server/internal/application/command/usecase"
 	query_dto "fitness-mcp-server/internal/application/query/dto"
 	query_handler "fitness-mcp-server/internal/application/query/handler"
 	query_usecase "fitness-mcp-server/internal/application/query/usecase"
-	command_usecase "fitness-mcp-server/internal/application/command/usecase"
 	"fitness-mcp-server/internal/config"
-	"fitness-mcp-server/internal/infrastructure/repository/sqlite"
 	sqlite_query "fitness-mcp-server/internal/infrastructure/query/sqlite"
+	"fitness-mcp-server/internal/infrastructure/repository/sqlite"
 	"fitness-mcp-server/internal/interface/repository"
 	"fmt"
 	"log"
@@ -64,7 +64,7 @@ func main() {
 		if err != nil {
 			return mcp.NewToolResultError("dateパラメータが必要です: " + err.Error()), nil
 		}
-		
+
 		date, err := time.Parse("2006-01-02", dateStr)
 		if err != nil {
 			return mcp.NewToolResultError("日付の形式が不正です（YYYY-MM-DD形式で入力してください）: " + err.Error()), nil
@@ -93,10 +93,10 @@ func main() {
 			if !ok {
 				return mcp.NewToolResultError("exercise nameが必要です"), nil
 			}
-			
+
 			category, ok := exerciseMap["category"].(string)
 			if !ok {
-				return mcp.NewToolResultError("exercise categoryが必要です"), nil
+				return mcp.NewToolResultError("exercise categoryが必要です。有効な値: Compound（複合種目）, Isolation（単関節種目）, Cardio（有酸素運動）"), nil
 			}
 
 			// セットの取得
@@ -140,6 +140,9 @@ func main() {
 				if rpeData, exists := setMap["rpe"]; exists {
 					if rpeFloat, ok := rpeData.(float64); ok {
 						rpeInt := int(rpeFloat)
+						if rpeInt < 1 || rpeInt > 10 {
+							return mcp.NewToolResultError("RPEは1-10の範囲で指定してください（1:非常に楽 〜 10:限界）"), nil
+						}
 						rpe = &rpeInt
 					}
 				}
@@ -200,17 +203,49 @@ func main() {
 	// ツールの登録
 	tool := mcp.NewTool(
 		"record_training",
-		mcp.WithDescription("筋トレの記録を管理するツール"),
+		mcp.WithDescription(`筋トレセッションの記録を管理するツール。実施したエクササイズ、セット数、重量、回数、休憩時間を記録できます。
+
+【使用例】
+- ベンチプレス 80kg×10回を3セット実施した場合
+- スクワット 100kg×8回、休憩180秒で実施した場合  
+- 複数のエクササイズを一つのセッションとして記録する場合`),
 		mcp.WithString("date",
 			mcp.Required(),
-			mcp.Description("トレーニング日付（YYYY-MM-DD形式）"),
+			mcp.Description("トレーニング実施日付。YYYY-MM-DD形式で指定してください。例: 2024-06-14"),
 		),
-		mcp.WithObject("exercises",
+		mcp.WithArray("exercises",
 			mcp.Required(),
-			mcp.Description("エクササイズの配列"),
+			mcp.Description(`実施したエクササイズのリスト。各エクササイズには以下を含める必要があります:
+
+【エクササイズオブジェクト】
+{
+  "name": "エクササイズ名（例: ベンチプレス、スクワット、デッドリフト、ダンベルカール等）",
+  "category": "エクササイズカテゴリ（必須）",
+  "sets": [セット配列]
+}
+
+【categoryの選択肢】
+- "Compound": 複合種目（ベンチプレス、スクワット、デッドリフト等）
+- "Isolation": 単関節種目（ダンベルカール、レッグエクステンション等）  
+- "Cardio": 有酸素運動（ランニング、バイク等）
+
+【setオブジェクト】
+{
+  "weight_kg": 使用重量（kg、数値）,
+  "reps": 実施回数（回、整数）,
+  "rest_time_seconds": 休憩時間（秒、整数）,
+  "rpe": RPE値（1-10、省略可）
+}
+
+【RPEについて】
+RPE（Rate of Perceived Exertion）は主観的運動強度です。
+- 1-3: 非常に楽
+- 4-6: 楽〜やや楽  
+- 7-8: きつい
+- 9-10: 非常にきつい〜限界`),
 		),
 		mcp.WithString("notes",
-			mcp.Description("メモ（オプション）"),
+			mcp.Description("セッション全体のメモや備考（省略可）。例: 調子良い、フォーム意識、疲労感あり等"),
 		),
 	)
 

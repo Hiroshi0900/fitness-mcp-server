@@ -49,11 +49,11 @@ type PersonalRecordDTO struct {
 
 // ProgressAnalysisDTO は進捗分析DTO
 type ProgressAnalysisDTO struct {
-	ExerciseName     string                  `json:"exercise_name"`
-	Period           string                  `json:"period"`
-	WeightProgress   WeightProgressDTO       `json:"weight_progress"`
-	VolumeProgress   VolumeProgressDTO       `json:"volume_progress"`
-	FrequencyAnalysis FrequencyAnalysisDTO   `json:"frequency_analysis"`
+	ExerciseName      string               `json:"exercise_name"`
+	Period            string               `json:"period"`
+	WeightProgress    WeightProgressDTO    `json:"weight_progress"`
+	VolumeProgress    VolumeProgressDTO    `json:"volume_progress"`
+	FrequencyAnalysis FrequencyAnalysisDTO `json:"frequency_analysis"`
 }
 
 // WeightProgressDTO は重量進捗DTO
@@ -93,9 +93,9 @@ type BIG3AnalysisDTO struct {
 
 // BIG3RatioDTO はBIG3比率DTO
 type BIG3RatioDTO struct {
-	BenchToBodyWeight float64 `json:"bench_to_body_weight"`
-	SquatToBodyWeight float64 `json:"squat_to_body_weight"`
+	BenchToBodyWeight    float64 `json:"bench_to_body_weight"`
+	SquatToBodyWeight    float64 `json:"squat_to_body_weight"`
 	DeadliftToBodyWeight float64 `json:"deadlift_to_body_weight"`
-	SquatToBench      float64 `json:"squat_to_bench"`
-	DeadliftToBench   float64 `json:"deadlift_to_bench"`
+	SquatToBench         float64 `json:"squat_to_bench"`
+	DeadliftToBench      float64 `json:"deadlift_to_bench"`
 }

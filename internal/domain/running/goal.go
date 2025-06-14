@@ -18,11 +18,11 @@ type EventType struct {
 
 // 定義済みイベントタイプの定数
 var (
-	FiveK      = EventType{value: "5K"}      // 5km
-	TenK       = EventType{value: "10K"}     // 10km
-	HalfMarathon = EventType{value: "Half"}  // ハーフマラソン
-	Marathon   = EventType{value: "Marathon"} // フルマラソン
-	Custom     = EventType{value: "Custom"}   // カスタム距離
+	FiveK        = EventType{value: "5K"}       // 5km
+	TenK         = EventType{value: "10K"}      // 10km
+	HalfMarathon = EventType{value: "Half"}     // ハーフマラソン
+	Marathon     = EventType{value: "Marathon"} // フルマラソン
+	Custom       = EventType{value: "Custom"}   // カスタム距離
 )
 
 // NewEventType はイベントタイプを作成します
@@ -113,15 +113,15 @@ func (gs GoalStatus) IsActive() bool {
 
 // RunningGoal はランニング目標を表すエンティティ
 type RunningGoal struct {
-	id           shared.GoalID // 目標ID
-	eventType    EventType     // イベントタイプ
-	targetTime   Duration      // 目標タイム
-	targetPace   Pace          // 目標ペース
-	eventDate    *time.Time    // イベント日（オプション）
-	status       GoalStatus    // 状態
-	description  string        // 説明
-	createdAt    time.Time     // 作成日時
-	achievedAt   *time.Time    // 達成日時（オプション）
+	id          shared.GoalID // 目標ID
+	eventType   EventType     // イベントタイプ
+	targetTime  Duration      // 目標タイム
+	targetPace  Pace          // 目標ペース
+	eventDate   *time.Time    // イベント日（オプション）
+	status      GoalStatus    // 状態
+	description string        // 説明
+	createdAt   time.Time     // 作成日時
+	achievedAt  *time.Time    // 達成日時（オプション）
 }
 
 // NewRunningGoal は新しいRunningGoalを作成します

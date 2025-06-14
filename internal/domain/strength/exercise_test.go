@@ -161,14 +161,14 @@ func TestExercise_MaxWeight(t *testing.T) {
 func TestExercise_TotalVolume(t *testing.T) {
 	// Arrange
 	exercise := NewExercise(BenchPress, Compound)
-	
+
 	weight1, _ := NewWeight(95.0)
 	reps1, _ := NewReps(8)
 	restTime, _ := NewRestTime(3 * time.Minute)
-	
+
 	weight2, _ := NewWeight(95.0)
 	reps2, _ := NewReps(6)
-	
+
 	exercise.AddSet(NewSet(weight1, reps1, restTime, nil))
 	exercise.AddSet(NewSet(weight2, reps2, restTime, nil))
 
