@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"embed"
 	"fmt"
+	"log"
 	"time"
 
 	"fitness-mcp-server/internal/domain/shared"
@@ -32,9 +33,18 @@ func NewStrengthTrainingRepository(db *sql.DB) (*StrengthRepository, error) {
 
 // NewStrengthRepository はファイルパスからSQLite Repositoryを作成します
 func NewStrengthRepository(dbPath string) (repository.StrengthTrainingRepository, error) {
+	log.Printf("Creating SQLite repository with path: %s", dbPath)
+	
 	db, err := sql.Open("sqlite", dbPath)
 	if err != nil {
+		log.Printf("Failed to open SQLite database: %v", err)
 		return nil, fmt.Errorf("failed to open database: %w", err)
+	}
+
+	// 接続テスト
+	if err := db.Ping(); err != nil {
+		log.Printf("Failed to ping SQLite database: %v", err)
+		return nil, fmt.Errorf("failed to ping database: %w", err)
 	}
 
 	// SQLiteの設定
@@ -42,6 +52,7 @@ func NewStrengthRepository(dbPath string) (repository.StrengthTrainingRepository
 	db.SetMaxIdleConns(2)            // アイドル接続数
 	db.SetConnMaxLifetime(time.Hour) // 接続の最大生存時間
 
+	log.Printf("SQLite database opened successfully: %s", dbPath)
 	return NewStrengthTrainingRepository(db)
 }
 
@@ -52,16 +63,22 @@ func (r *StrengthRepository) Initialize() error {
 
 // migrate はマイグレーションを実行します
 func (r *StrengthRepository) migrate() error {
+	log.Printf("Starting database migration...")
+	
 	migrationSQL, err := migrationFiles.ReadFile("migrations/001_initial_schema.sql")
 	if err != nil {
+		log.Printf("Failed to read migration file: %v", err)
 		return fmt.Errorf("failed to read migration file: %w", err)
 	}
 
+	log.Printf("Executing migration SQL...")
 	_, err = r.db.Exec(string(migrationSQL))
 	if err != nil {
+		log.Printf("Failed to execute migration: %v", err)
 		return fmt.Errorf("failed to execute migration: %w", err)
 	}
 
+	log.Printf("Database migration completed successfully")
 	return nil
 }
 

@@ -22,11 +22,13 @@ import (
 func main() {
 	// 設定の初期化
 	cfg := config.NewConfig()
+	log.Printf("Database path: %s", cfg.Database.SQLitePath)
 
 	// データベースディレクトリを作成
 	if err := cfg.EnsureDatabaseDir(); err != nil {
 		log.Fatalf("Failed to create database directory: %v", err)
 	}
+	log.Printf("Database directory created successfully")
 
 	// 依存関係の初期化
 	dependencies, err := initializeDependencies(cfg)
@@ -112,27 +114,40 @@ func registerAllTools(s *server.MCPServer, deps *Dependencies) error {
 
 // initializeStrengthRepository はStrengthRepositoryを初期化します
 func initializeStrengthRepository(dbPath string) (repository.StrengthTrainingRepository, error) {
+	log.Printf("Initializing SQLite repository at: %s", dbPath)
+	
 	// SQLiteリポジトリを作成
 	repo, err := sqlite.NewStrengthRepository(dbPath)
 	if err != nil {
+		log.Printf("Failed to create SQLite repository: %v", err)
 		return nil, err
 	}
 
 	// データベースの初期化（テーブル作成）
 	if err := repo.Initialize(); err != nil {
+		log.Printf("Failed to initialize database: %v", err)
 		return nil, err
 	}
 
-	log.Printf("Initialized SQLite repository at: %s", dbPath)
+	log.Printf("Successfully initialized SQLite repository at: %s", dbPath)
 	return repo, nil
 }
 
 // initializeStrengthQueryService はStrengthQueryServiceを初期化します
 func initializeStrengthQueryService(cfg *config.Config) (*sqlite_query.StrengthQueryService, error) {
+	log.Printf("Initializing SQLite query service at: %s", cfg.Database.SQLitePath)
+	
 	// データベース接続を開く
 	db, err := sql.Open("sqlite", cfg.Database.SQLitePath)
 	if err != nil {
+		log.Printf("Failed to open database: %v", err)
 		return nil, fmt.Errorf("failed to open database: %w", err)
+	}
+
+	// 接続テスト
+	if err := db.Ping(); err != nil {
+		log.Printf("Failed to ping database: %v", err)
+		return nil, fmt.Errorf("failed to ping database: %w", err)
 	}
 
 	// SQLiteの設定
@@ -143,6 +158,6 @@ func initializeStrengthQueryService(cfg *config.Config) (*sqlite_query.StrengthQ
 	// SQLiteクエリサービスを作成
 	queryService := sqlite_query.NewStrengthQueryService(db)
 
-	log.Printf("Initialized SQLite query service at: %s", cfg.Database.SQLitePath)
+	log.Printf("Successfully initialized SQLite query service at: %s", cfg.Database.SQLitePath)
 	return queryService, nil
 }
