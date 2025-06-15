@@ -30,8 +30,8 @@ func FormatQueryResponse(response *query_dto.GetTrainingsByDateRangeResponse) st
 
 		// エクササイズの概要のみ（詳細は省略）
 		for _, exercise := range training.Exercises {
-			result += fmt.Sprintf("  • %s (%s): %d sets\n",
-				exercise.Name, exercise.Category, len(exercise.Sets))
+			result += fmt.Sprintf("  • %s: %d sets\n",
+				exercise.Name, len(exercise.Sets))
 		}
 		result += "\n"
 	}
@@ -48,7 +48,7 @@ func FormatPersonalRecordsResponse(response *query_dto.GetPersonalRecordsRespons
 	result := fmt.Sprintf("🏆 **個人記録 (%d種目)**\n\n", response.Count)
 
 	for i, record := range response.Records {
-		result += fmt.Sprintf("**%d. %s (%s)**\n", i+1, record.ExerciseName, record.Category)
+		result += fmt.Sprintf("**%d. %s**\n", i+1, record.ExerciseName)
 		result += fmt.Sprintf("📊 総セッション数: %d回 | 最終実施: %s\n\n",
 			record.TotalSessions,
 			record.LastPerformed.Format("2006-01-02"))
@@ -64,8 +64,8 @@ func FormatPersonalRecordsResponse(response *query_dto.GetPersonalRecordsRespons
 			if details.RPE != nil {
 				rpeText = fmt.Sprintf(", RPE: %d", *details.RPE)
 			}
-			result += fmt.Sprintf("   🔍 セット詳細: %.1fkg × %d回 (休憩: %ds%s)\n",
-				details.WeightKg, details.Reps, details.RestTimeSeconds, rpeText)
+			result += fmt.Sprintf("   🔍 セット詳細: %.1fkg × %d回%s\n",
+				details.WeightKg, details.Reps, rpeText)
 		}
 
 		// 最大レップ数

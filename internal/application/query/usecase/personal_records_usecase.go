@@ -50,7 +50,6 @@ func (u *personalRecordsUsecaseImpl) GetPersonalRecords(query query_dto.GetPerso
 func convertQueryResultToDTO(queryResult query_dto.PersonalRecordQueryResult) query_dto.PersonalRecord {
 	return query_dto.PersonalRecord{
 		ExerciseName: queryResult.ExerciseName,
-		Category:     queryResult.Category,
 		MaxWeight: query_dto.PersonalRecordDetail{
 			Value:      queryResult.MaxWeight.Value,
 			Date:       queryResult.MaxWeight.Date,
@@ -81,9 +80,8 @@ func convertSetQueryDetailsToDTO(setDetails *query_dto.SetQueryDetails) *query_d
 	}
 
 	return &query_dto.SetInfo{
-		WeightKg:        setDetails.WeightKg,
-		Reps:            setDetails.Reps,
-		RestTimeSeconds: setDetails.RestTimeSeconds,
-		RPE:             setDetails.RPE,
+		WeightKg: setDetails.WeightKg,
+		Reps:     setDetails.Reps,
+		RPE:      setDetails.RPE,
 	}
 }

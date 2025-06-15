@@ -2,7 +2,6 @@ package strength
 
 import (
 	"fmt"
-	"time"
 )
 
 // =============================================================================
@@ -18,18 +17,14 @@ type (
 		value int
 	}
 
-	RestTime struct {
-		duration time.Duration
-	}
 	// RPE は主観的運動強度を表す値オブジェクト
 	RPE struct {
 		value int
 	}
 	Set struct {
-		weight   Weight   // 重量
-		reps     Reps     // 反復回数
-		restTime RestTime // 休憩時間
-		rpe      *RPE     // オプショナル
+		weight Weight // 重量
+		reps   Reps   // 反復回数
+		rpe    *RPE   // オプショナル
 	}
 )
 
@@ -85,32 +80,6 @@ func (r Reps) Equals(other Reps) bool {
 	return r.value == other.value
 }
 
-// NewRestTime は休憩時間を作成します
-func NewRestTime(d time.Duration) (RestTime, error) {
-	if d < 0 {
-		return RestTime{}, fmt.Errorf("rest time cannot be negative: %v", d)
-	}
-	if d > 30*time.Minute { // 現実的な上限設定
-		return RestTime{}, fmt.Errorf("rest time is too long: %v", d)
-	}
-	return RestTime{duration: d}, nil
-}
-
-// Duration は休憩時間を返します
-func (rt RestTime) Duration() time.Duration {
-	return rt.duration
-}
-
-// String は休憩時間の文字列表現を返します
-func (rt RestTime) String() string {
-	return rt.duration.String()
-}
-
-// Equals は2つの休憩時間が等しいかを判定します
-func (rt RestTime) Equals(other RestTime) bool {
-	return rt.duration == other.duration
-}
-
 // NewRPE は主観的運動強度を作成します
 func NewRPE(rating int) (RPE, error) {
 	if rating < 1 || rating > 10 {
@@ -135,12 +104,11 @@ func (rpe RPE) Equals(other RPE) bool {
 }
 
 // NewSet は新しいSetを作成します
-func NewSet(weight Weight, reps Reps, restTime RestTime, rpe *RPE) Set {
+func NewSet(weight Weight, reps Reps, rpe *RPE) Set {
 	return Set{
-		weight:   weight,
-		reps:     reps,
-		restTime: restTime,
-		rpe:      rpe,
+		weight: weight,
+		reps:   reps,
+		rpe:    rpe,
 	}
 }
 
@@ -154,11 +122,6 @@ func (s Set) Reps() Reps {
 	return s.reps
 }
 
-// RestTime は休憩時間を返します
-func (s Set) RestTime() RestTime {
-	return s.restTime
-}
-
 // RPE は主観的運動強度を返します（オプショナル）
 func (s Set) RPE() *RPE {
 	return s.rpe
@@ -170,6 +133,6 @@ func (s Set) String() string {
 	if s.rpe != nil {
 		rpeStr = fmt.Sprintf(" %s", s.rpe.String())
 	}
-	return fmt.Sprintf("%s × %s (休憩: %s)%s",
-		s.weight.String(), s.reps.String(), s.restTime.String(), rpeStr)
+	return fmt.Sprintf("%s × %s%s",
+		s.weight.String(), s.reps.String(), rpeStr)
 }

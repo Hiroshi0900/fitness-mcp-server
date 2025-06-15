@@ -34,7 +34,7 @@ func NewStrengthTrainingRepository(db *sql.DB) (*StrengthRepository, error) {
 // NewStrengthRepository はファイルパスからSQLite Repositoryを作成します
 func NewStrengthRepository(dbPath string) (repository.StrengthTrainingRepository, error) {
 	log.Printf("Creating SQLite repository with path: %s", dbPath)
-	
+
 	db, err := sql.Open("sqlite", dbPath)
 	if err != nil {
 		log.Printf("Failed to open SQLite database: %v", err)
@@ -64,18 +64,64 @@ func (r *StrengthRepository) Initialize() error {
 // migrate はマイグレーションを実行します
 func (r *StrengthRepository) migrate() error {
 	log.Printf("Starting database migration...")
-	
-	migrationSQL, err := migrationFiles.ReadFile("migrations/001_initial_schema.sql")
+
+	// マイグレーション状態追跡テーブルを作成
+	_, err := r.db.Exec(`
+		CREATE TABLE IF NOT EXISTS schema_migrations (
+			version TEXT PRIMARY KEY,
+			applied_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		)
+	`)
 	if err != nil {
-		log.Printf("Failed to read migration file: %v", err)
-		return fmt.Errorf("failed to read migration file: %w", err)
+		log.Printf("Failed to create migrations table: %v", err)
+		return fmt.Errorf("failed to create migrations table: %w", err)
 	}
 
-	log.Printf("Executing migration SQL...")
-	_, err = r.db.Exec(string(migrationSQL))
-	if err != nil {
-		log.Printf("Failed to execute migration: %v", err)
-		return fmt.Errorf("failed to execute migration: %w", err)
+	// マイグレーションファイルのリスト（順序重要）
+	migrations := []struct {
+		version  string
+		filename string
+	}{
+		{"001", "migrations/001_initial_schema.sql"},
+		{"002", "migrations/002_remove_resttime_category.sql"},
+	}
+
+	for _, migration := range migrations {
+		// 既に適用済みかチェック
+		var count int
+		err := r.db.QueryRow(`SELECT COUNT(*) FROM schema_migrations WHERE version = ?`, migration.version).Scan(&count)
+		if err != nil {
+			log.Printf("Failed to check migration status for %s: %v", migration.version, err)
+			return fmt.Errorf("failed to check migration status for %s: %w", migration.version, err)
+		}
+
+		if count > 0 {
+			log.Printf("Migration %s already applied, skipping", migration.version)
+			continue
+		}
+
+		log.Printf("Executing migration: %s", migration.filename)
+
+		migrationSQL, err := migrationFiles.ReadFile(migration.filename)
+		if err != nil {
+			log.Printf("Failed to read migration file %s: %v", migration.filename, err)
+			return fmt.Errorf("failed to read migration file %s: %w", migration.filename, err)
+		}
+
+		_, err = r.db.Exec(string(migrationSQL))
+		if err != nil {
+			log.Printf("Failed to execute migration %s: %v", migration.filename, err)
+			return fmt.Errorf("failed to execute migration %s: %w", migration.filename, err)
+		}
+
+		// マイグレーション完了を記録
+		_, err = r.db.Exec(`INSERT INTO schema_migrations (version) VALUES (?)`, migration.version)
+		if err != nil {
+			log.Printf("Failed to record migration completion for %s: %v", migration.version, err)
+			return fmt.Errorf("failed to record migration completion for %s: %w", migration.version, err)
+		}
+
+		log.Printf("Successfully executed migration: %s", migration.filename)
 	}
 
 	log.Printf("Database migration completed successfully")
@@ -193,11 +239,10 @@ func (r *StrengthRepository) Delete(id shared.TrainingID) error {
 // saveExercise はエクササイズを保存し、IDを返します
 func (r *StrengthRepository) saveExercise(tx *sql.Tx, trainingID shared.TrainingID, exercise *strength.Exercise, order int) (int64, error) {
 	result, err := tx.Exec(`
-		INSERT INTO exercises (training_id, name, category, exercise_order) 
-		VALUES (?, ?, ?, ?)`,
+		INSERT INTO exercises (training_id, name, exercise_order) 
+		VALUES (?, ?, ?)`,
 		trainingID.String(),
 		exercise.Name().String(),
-		exercise.Category().String(),
 		order,
 	)
 	if err != nil {
@@ -216,12 +261,11 @@ func (r *StrengthRepository) saveSet(tx *sql.Tx, exerciseID int64, set strength.
 	}
 
 	_, err := tx.Exec(`
-		INSERT INTO sets (exercise_id, weight_kg, reps, rest_time_seconds, rpe, set_order) 
-		VALUES (?, ?, ?, ?, ?, ?)`,
+		INSERT INTO sets (exercise_id, weight_kg, reps, rpe, set_order) 
+		VALUES (?, ?, ?, ?, ?)`,
 		exerciseID,
 		set.Weight().Kg(),
 		set.Reps().Count(),
-		int(set.RestTime().Duration().Seconds()),
 		rpe,
 		order,
 	)

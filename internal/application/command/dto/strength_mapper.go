@@ -2,7 +2,6 @@ package dto
 
 import (
 	"fmt"
-	"time"
 
 	"fitness-mcp-server/internal/domain/shared"
 	"fitness-mcp-server/internal/domain/strength"
@@ -72,13 +71,7 @@ func (dto *ExerciseDTO) ToExercise() (*strength.Exercise, error) {
 		return nil, fmt.Errorf("invalid exercise name: %w", err)
 	}
 
-	// エクササイズカテゴリを作成
-	exerciseCategory, err := strength.NewExerciseCategory(dto.Category)
-	if err != nil {
-		return nil, fmt.Errorf("invalid exercise category: %w", err)
-	}
-
-	exercise := strength.NewExercise(exerciseName, exerciseCategory)
+	exercise := strength.NewExercise(exerciseName)
 
 	// セットを追加
 	for _, setDTO := range dto.Sets {
@@ -110,12 +103,6 @@ func (dto *SetDTO) ToSet() (strength.Set, error) {
 		return strength.Set{}, fmt.Errorf("invalid reps: %w", err)
 	}
 
-	// 休憩時間を作成
-	restTime, err := strength.NewRestTime(time.Duration(dto.RestTimeSeconds) * time.Second)
-	if err != nil {
-		return strength.Set{}, fmt.Errorf("invalid rest time: %w", err)
-	}
-
 	// RPEを作成（オプション）
 	var rpe *strength.RPE
 	if dto.RPE != nil {
@@ -126,7 +113,7 @@ func (dto *SetDTO) ToSet() (strength.Set, error) {
 		rpe = &rpeValue
 	}
 
-	return strength.NewSet(weight, reps, restTime, rpe), nil
+	return strength.NewSet(weight, reps, rpe), nil
 }
 
 // FromStrengthTraining はStrengthTrainingエンティティからTrainingSessionDTOを生成します
@@ -158,9 +145,8 @@ func FromExercise(exercise *strength.Exercise) *ExerciseDTO {
 	}
 
 	return &ExerciseDTO{
-		Name:     exercise.Name().String(),
-		Category: exercise.Category().String(),
-		Sets:     sets,
+		Name: exercise.Name().String(),
+		Sets: sets,
 	}
 }
 
@@ -173,9 +159,8 @@ func FromSet(set strength.Set) *SetDTO {
 	}
 
 	return &SetDTO{
-		WeightKg:        set.Weight().Kg(),
-		Reps:            set.Reps().Count(),
-		RestTimeSeconds: int(set.RestTime().Duration().Seconds()),
-		RPE:             rpe,
+		WeightKg: set.Weight().Kg(),
+		Reps:     set.Reps().Count(),
+		RPE:      rpe,
 	}
 }

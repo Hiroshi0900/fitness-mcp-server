@@ -195,21 +195,19 @@ func (s *StrengthQueryService) GetPersonalRecords(exerciseName *string) ([]dto.P
 	WITH exercise_stats AS (
 		SELECT 
 			e.name as exercise_name,
-			e.category,
 			COUNT(DISTINCT st.id) as total_sessions,
 			MAX(st.date) as last_performed
 		FROM exercises e
 		JOIN sets s ON e.id = s.exercise_id
 		JOIN strength_trainings st ON e.training_id = st.id
 		WHERE ($1 IS NULL OR e.name = $1)
-		GROUP BY e.name, e.category
+		GROUP BY e.name
 	),
 	max_weight_details AS (
 		SELECT DISTINCT
 			e.name as exercise_name,
 			s.weight_kg,
 			s.reps,
-			s.rest_time_seconds,
 			s.rpe,
 			st.date,
 			st.id as training_id,
@@ -224,7 +222,6 @@ func (s *StrengthQueryService) GetPersonalRecords(exerciseName *string) ([]dto.P
 			e.name as exercise_name,
 			s.weight_kg,
 			s.reps,
-			s.rest_time_seconds,
 			s.rpe,
 			st.date,
 			st.id as training_id,
@@ -239,7 +236,6 @@ func (s *StrengthQueryService) GetPersonalRecords(exerciseName *string) ([]dto.P
 			e.name as exercise_name,
 			s.weight_kg,
 			s.reps,
-			s.rest_time_seconds,
 			s.rpe,
 			st.date,
 			st.id as training_id,
@@ -252,27 +248,23 @@ func (s *StrengthQueryService) GetPersonalRecords(exerciseName *string) ([]dto.P
 	)
 	SELECT 
 		es.exercise_name,
-		es.category,
 		COALESCE(mwd.weight_kg, 0) as max_weight,
 		COALESCE(mwd.date, '1970-01-01') as max_weight_date,
 		COALESCE(mwd.training_id, '') as max_weight_training_id,
 		COALESCE(mwd.weight_kg, 0) as max_weight_details_weight,
 		COALESCE(mwd.reps, 0) as max_weight_details_reps,
-		COALESCE(mwd.rest_time_seconds, 0) as max_weight_details_rest,
 		mwd.rpe as max_weight_details_rpe,
 		COALESCE(mrd.reps, 0) as max_reps,
 		COALESCE(mrd.date, '1970-01-01') as max_reps_date,
 		COALESCE(mrd.training_id, '') as max_reps_training_id,
 		COALESCE(mrd.weight_kg, 0) as max_reps_details_weight,
 		COALESCE(mrd.reps, 0) as max_reps_details_reps,
-		COALESCE(mrd.rest_time_seconds, 0) as max_reps_details_rest,
 		mrd.rpe as max_reps_details_rpe,
 		COALESCE(mvd.volume, 0) as max_volume,
 		COALESCE(mvd.date, '1970-01-01') as max_volume_date,
 		COALESCE(mvd.training_id, '') as max_volume_training_id,
 		COALESCE(mvd.weight_kg, 0) as max_volume_details_weight,
 		COALESCE(mvd.reps, 0) as max_volume_details_reps,
-		COALESCE(mvd.rest_time_seconds, 0) as max_volume_details_rest,
 		mvd.rpe as max_volume_details_rpe,
 		es.total_sessions,
 		es.last_performed
@@ -299,27 +291,23 @@ func (s *StrengthQueryService) GetPersonalRecords(exerciseName *string) ([]dto.P
 
 		err := rows.Scan(
 			&record.ExerciseName,
-			&record.Category,
 			&record.MaxWeight.Value,
 			&maxWeightDateStr,
 			&record.MaxWeight.TrainingID,
 			&maxWeightDetails.WeightKg,
 			&maxWeightDetails.Reps,
-			&maxWeightDetails.RestTimeSeconds,
 			&maxWeightDetailsRPE,
 			&record.MaxReps.Value,
 			&maxRepsDateStr,
 			&record.MaxReps.TrainingID,
 			&maxRepsDetails.WeightKg,
 			&maxRepsDetails.Reps,
-			&maxRepsDetails.RestTimeSeconds,
 			&maxRepsDetailsRPE,
 			&record.MaxVolume.Value,
 			&maxVolumeDateStr,
 			&record.MaxVolume.TrainingID,
 			&maxVolumeDetails.WeightKg,
 			&maxVolumeDetails.Reps,
-			&maxVolumeDetails.RestTimeSeconds,
 			&maxVolumeDetailsRPE,
 			&record.TotalSessions,
 			&lastPerformedStr,
@@ -387,7 +375,7 @@ func (s *StrengthQueryService) GetPersonalRecords(exerciseName *string) ([]dto.P
 // findExercisesByTrainingID はトレーニングIDでエクササイズを検索します
 func (s *StrengthQueryService) findExercisesByTrainingID(trainingID shared.TrainingID) ([]*strength.Exercise, error) {
 	rows, err := s.db.Query(`
-		SELECT id, name, category 
+		SELECT id, name 
 		FROM exercises 
 		WHERE training_id = ? 
 		ORDER BY exercise_order`, trainingID.String())
@@ -399,9 +387,9 @@ func (s *StrengthQueryService) findExercisesByTrainingID(trainingID shared.Train
 	var exercises []*strength.Exercise
 	for rows.Next() {
 		var id int64
-		var name, category string
+		var name string
 
-		if err := rows.Scan(&id, &name, &category); err != nil {
+		if err := rows.Scan(&id, &name); err != nil {
 			return nil, err
 		}
 
@@ -410,12 +398,7 @@ func (s *StrengthQueryService) findExercisesByTrainingID(trainingID shared.Train
 			return nil, fmt.Errorf("invalid exercise name: %w", err)
 		}
 
-		exerciseCategory, err := strength.NewExerciseCategory(category)
-		if err != nil {
-			return nil, fmt.Errorf("invalid exercise category: %w", err)
-		}
-
-		exercise := strength.NewExercise(exerciseName, exerciseCategory)
+		exercise := strength.NewExercise(exerciseName)
 
 		// セットを取得
 		sets, err := s.findSetsByExerciseID(id)
@@ -448,7 +431,7 @@ func (s *StrengthQueryService) findExercisesByTrainingIDs(trainingIDs []string) 
 	}
 
 	query := fmt.Sprintf(`
-		SELECT id, training_id, name, category 
+		SELECT id, training_id, name 
 		FROM exercises 
 		WHERE training_id IN (%s) 
 		ORDER BY training_id, exercise_order`,
@@ -465,15 +448,14 @@ func (s *StrengthQueryService) findExercisesByTrainingIDs(trainingIDs []string) 
 	exerciseDataMap := make(map[int64]struct {
 		trainingID string
 		name       string
-		category   string
 	})
 	exercisesByTraining := make(map[string][]*strength.Exercise)
 
 	for rows.Next() {
 		var exerciseID int64
-		var trainingID, name, category string
+		var trainingID, name string
 
-		if err := rows.Scan(&exerciseID, &trainingID, &name, &category); err != nil {
+		if err := rows.Scan(&exerciseID, &trainingID, &name); err != nil {
 			return nil, err
 		}
 
@@ -481,8 +463,7 @@ func (s *StrengthQueryService) findExercisesByTrainingIDs(trainingIDs []string) 
 		exerciseDataMap[exerciseID] = struct {
 			trainingID string
 			name       string
-			category   string
-		}{trainingID, name, category}
+		}{trainingID, name}
 	}
 
 	if err := rows.Err(); err != nil {
@@ -502,12 +483,7 @@ func (s *StrengthQueryService) findExercisesByTrainingIDs(trainingIDs []string) 
 			return nil, fmt.Errorf("invalid exercise name: %w", err)
 		}
 
-		exerciseCategory, err := strength.NewExerciseCategory(data.category)
-		if err != nil {
-			return nil, fmt.Errorf("invalid exercise category: %w", err)
-		}
-
-		exercise := strength.NewExercise(exerciseName, exerciseCategory)
+		exercise := strength.NewExercise(exerciseName)
 
 		// セットを追加
 		if sets, exists := setsByExercise[exerciseID]; exists {
@@ -525,7 +501,7 @@ func (s *StrengthQueryService) findExercisesByTrainingIDs(trainingIDs []string) 
 // findSetsByExerciseID はエクササイズIDでセットを検索します
 func (s *StrengthQueryService) findSetsByExerciseID(exerciseID int64) ([]strength.Set, error) {
 	rows, err := s.db.Query(`
-		SELECT weight_kg, reps, rest_time_seconds, rpe 
+		SELECT weight_kg, reps, rpe 
 		FROM sets 
 		WHERE exercise_id = ? 
 		ORDER BY set_order`, exerciseID)
@@ -538,10 +514,9 @@ func (s *StrengthQueryService) findSetsByExerciseID(exerciseID int64) ([]strengt
 	for rows.Next() {
 		var weightKg float64
 		var reps int
-		var restTimeSeconds int
 		var rpe *int
 
-		if err := rows.Scan(&weightKg, &reps, &restTimeSeconds, &rpe); err != nil {
+		if err := rows.Scan(&weightKg, &reps, &rpe); err != nil {
 			return nil, err
 		}
 
@@ -555,11 +530,6 @@ func (s *StrengthQueryService) findSetsByExerciseID(exerciseID int64) ([]strengt
 			return nil, fmt.Errorf("invalid reps: %w", err)
 		}
 
-		restTime, err := strength.NewRestTime(time.Duration(restTimeSeconds) * time.Second)
-		if err != nil {
-			return nil, fmt.Errorf("invalid rest time: %w", err)
-		}
-
 		var rpeObj *strength.RPE
 		if rpe != nil {
 			rpeValue, err := strength.NewRPE(*rpe)
@@ -569,7 +539,7 @@ func (s *StrengthQueryService) findSetsByExerciseID(exerciseID int64) ([]strengt
 			rpeObj = &rpeValue
 		}
 
-		set := strength.NewSet(weight, repsObj, restTime, rpeObj)
+		set := strength.NewSet(weight, repsObj, rpeObj)
 		sets = append(sets, set)
 	}
 
@@ -591,7 +561,7 @@ func (s *StrengthQueryService) findSetsByExerciseIDs(exerciseIDs []int64) (map[i
 	}
 
 	query := fmt.Sprintf(`
-		SELECT exercise_id, weight_kg, reps, rest_time_seconds, rpe 
+		SELECT exercise_id, weight_kg, reps, rpe 
 		FROM sets 
 		WHERE exercise_id IN (%s) 
 		ORDER BY exercise_id, set_order`,
@@ -608,10 +578,9 @@ func (s *StrengthQueryService) findSetsByExerciseIDs(exerciseIDs []int64) (map[i
 		var exerciseID int64
 		var weightKg float64
 		var reps int
-		var restTimeSeconds int
 		var rpe *int
 
-		if err := rows.Scan(&exerciseID, &weightKg, &reps, &restTimeSeconds, &rpe); err != nil {
+		if err := rows.Scan(&exerciseID, &weightKg, &reps, &rpe); err != nil {
 			return nil, err
 		}
 
@@ -625,11 +594,6 @@ func (s *StrengthQueryService) findSetsByExerciseIDs(exerciseIDs []int64) (map[i
 			return nil, fmt.Errorf("invalid reps: %w", err)
 		}
 
-		restTime, err := strength.NewRestTime(time.Duration(restTimeSeconds) * time.Second)
-		if err != nil {
-			return nil, fmt.Errorf("invalid rest time: %w", err)
-		}
-
 		var rpeObj *strength.RPE
 		if rpe != nil {
 			rpeValue, err := strength.NewRPE(*rpe)
@@ -639,7 +603,7 @@ func (s *StrengthQueryService) findSetsByExerciseIDs(exerciseIDs []int64) (map[i
 			rpeObj = &rpeValue
 		}
 
-		set := strength.NewSet(weight, repsObj, restTime, rpeObj)
+		set := strength.NewSet(weight, repsObj, rpeObj)
 		setsByExercise[exerciseID] = append(setsByExercise[exerciseID], set)
 	}
 

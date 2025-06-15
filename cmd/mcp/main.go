@@ -115,7 +115,7 @@ func registerAllTools(s *server.MCPServer, deps *Dependencies) error {
 // initializeStrengthRepository はStrengthRepositoryを初期化します
 func initializeStrengthRepository(dbPath string) (repository.StrengthTrainingRepository, error) {
 	log.Printf("Initializing SQLite repository at: %s", dbPath)
-	
+
 	// SQLiteリポジトリを作成
 	repo, err := sqlite.NewStrengthRepository(dbPath)
 	if err != nil {
@@ -136,7 +136,7 @@ func initializeStrengthRepository(dbPath string) (repository.StrengthTrainingRep
 // initializeStrengthQueryService はStrengthQueryServiceを初期化します
 func initializeStrengthQueryService(cfg *config.Config) (*sqlite_query.StrengthQueryService, error) {
 	log.Printf("Initializing SQLite query service at: %s", cfg.Database.SQLitePath)
-	
+
 	// データベース接続を開く
 	db, err := sql.Open("sqlite", cfg.Database.SQLitePath)
 	if err != nil {

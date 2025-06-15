@@ -31,17 +31,15 @@ type DeleteTrainingCommand struct {
 
 // ExerciseDTO はエクササイズDTO
 type ExerciseDTO struct {
-	Name     string   `json:"name"`
-	Category string   `json:"category"`
-	Sets     []SetDTO `json:"sets"`
+	Name string   `json:"name"`
+	Sets []SetDTO `json:"sets"`
 }
 
 // SetDTO はセットDTO
 type SetDTO struct {
-	WeightKg        float64 `json:"weight_kg"`
-	Reps            int     `json:"reps"`
-	RestTimeSeconds int     `json:"rest_time_seconds"`
-	RPE             *int    `json:"rpe,omitempty"` // オプション
+	WeightKg float64 `json:"weight_kg"`
+	Reps     int     `json:"reps"`
+	RPE      *int    `json:"rpe,omitempty"` // オプション
 }
 
 // Validate はRecordTrainingCommandの妥当性検証を行います
@@ -92,9 +90,6 @@ func (dto *ExerciseDTO) Validate() error {
 	if dto.Name == "" {
 		return fmt.Errorf("exercise name is required")
 	}
-	if dto.Category == "" {
-		return fmt.Errorf("exercise category is required")
-	}
 	if len(dto.Sets) == 0 {
 		return fmt.Errorf("at least one set is required")
 	}
@@ -113,9 +108,6 @@ func (dto *SetDTO) Validate() error {
 	}
 	if dto.Reps <= 0 {
 		return fmt.Errorf("reps must be positive")
-	}
-	if dto.RestTimeSeconds < 0 {
-		return fmt.Errorf("rest time cannot be negative")
 	}
 	if dto.RPE != nil && (*dto.RPE < 1 || *dto.RPE > 10) {
 		return fmt.Errorf("RPE must be between 1 and 10")

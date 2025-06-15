@@ -27,11 +27,11 @@ func NewTrainingToolHandler(commandHandler *handler.StrengthCommandHandler) *Tra
 func (h *TrainingToolHandler) Register(s *server.MCPServer) error {
 	tool := mcp.NewTool(
 		"record_training",
-		mcp.WithDescription(`筋トレセッションの記録を管理するツール。実施したエクササイズ、セット数、重量、回数、休憩時間を記録できます。
+		mcp.WithDescription(`筋トレセッションの記録を管理するツール。実施したエクササイズ、セット数、重量、回数を記録できます。
 
 【使用例】
 - ベンチプレス 80kg×10回を3セット実施した場合
-- スクワット 100kg×8回、休憩180秒で実施した場合  
+- スクワット 100kg×8回で実施した場合  
 - 複数のエクササイズを一つのセッションとして記録する場合`),
 		mcp.WithString("date",
 			mcp.Required(),
@@ -44,20 +44,13 @@ func (h *TrainingToolHandler) Register(s *server.MCPServer) error {
 【エクササイズオブジェクト】
 {
   "name": "エクササイズ名（例: ベンチプレス、スクワット、デッドリフト、ダンベルカール等）",
-  "category": "エクササイズカテゴリ（必須）",
   "sets": [セット配列]
 }
-
-【categoryの選択肢】
-- "Compound": 複合種目（ベンチプレス、スクワット、デッドリフト等）
-- "Isolation": 単関節種目（ダンベルカール、レッグエクステンション等）  
-- "Cardio": 有酸素運動（ランニング、バイク等）
 
 【setオブジェクト】
 {
   "weight_kg": 使用重量（kg、数値）,
   "reps": 実施回数（回、整数）,
-  "rest_time_seconds": 休憩時間（秒、整数）,
   "rpe": RPE値（1-10、省略可）
 }
 
@@ -156,15 +149,10 @@ func (h *TrainingToolHandler) parseExercises(paramsMap map[string]interface{}) (
 			return nil, fmt.Errorf("exercise要素が不正です")
 		}
 
-		// エクササイズ名とカテゴリの取得
+		// エクササイズ名の取得
 		name, ok := exerciseMap["name"].(string)
 		if !ok {
 			return nil, fmt.Errorf("exercise nameが必要です")
-		}
-
-		category, ok := exerciseMap["category"].(string)
-		if !ok {
-			return nil, fmt.Errorf("exercise categoryが必要です。有効な値: Compound（複合種目）, Isolation（単関節種目）, Cardio（有酸素運動）")
 		}
 
 		// セットの解析
@@ -174,9 +162,8 @@ func (h *TrainingToolHandler) parseExercises(paramsMap map[string]interface{}) (
 		}
 
 		exercises = append(exercises, dto.ExerciseDTO{
-			Name:     name,
-			Category: category,
-			Sets:     sets,
+			Name: name,
+			Sets: sets,
 		})
 	}
 
@@ -202,7 +189,7 @@ func (h *TrainingToolHandler) parseSets(exerciseMap map[string]interface{}) ([]d
 			return nil, fmt.Errorf("set要素が不正です")
 		}
 
-		// 重量、回数、休憩時間の取得
+		// 重量、回数の取得
 		weightKg, ok := setMap["weight_kg"].(float64)
 		if !ok {
 			return nil, fmt.Errorf("weight_kgが必要です")
@@ -213,12 +200,6 @@ func (h *TrainingToolHandler) parseSets(exerciseMap map[string]interface{}) ([]d
 			return nil, fmt.Errorf("repsが必要です")
 		}
 		reps := int(repsFloat)
-
-		restTimeFloat, ok := setMap["rest_time_seconds"].(float64)
-		if !ok {
-			return nil, fmt.Errorf("rest_time_secondsが必要です")
-		}
-		restTime := int(restTimeFloat)
 
 		// RPE（オプション）
 		var rpe *int
@@ -233,10 +214,9 @@ func (h *TrainingToolHandler) parseSets(exerciseMap map[string]interface{}) ([]d
 		}
 
 		sets = append(sets, dto.SetDTO{
-			WeightKg:        weightKg,
-			Reps:            reps,
-			RestTimeSeconds: restTime,
-			RPE:             rpe,
+			WeightKg: weightKg,
+			Reps:     reps,
+			RPE:      rpe,
 		})
 	}
 

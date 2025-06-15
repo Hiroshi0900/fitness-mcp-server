@@ -5,7 +5,6 @@ import "time"
 // PersonalRecordQueryResult はクエリ層専用の個人記録結果
 type PersonalRecordQueryResult struct {
 	ExerciseName  string
-	Category      string
 	MaxWeight     PersonalRecordQueryDetail
 	MaxReps       PersonalRecordQueryDetail
 	MaxVolume     PersonalRecordQueryDetail
@@ -23,8 +22,7 @@ type PersonalRecordQueryDetail struct {
 
 // SetQueryDetails はセット詳細（Query層専用）
 type SetQueryDetails struct {
-	WeightKg        float64
-	Reps            int
-	RestTimeSeconds int
-	RPE             *int
+	WeightKg float64
+	Reps     int
+	RPE      *int
 }

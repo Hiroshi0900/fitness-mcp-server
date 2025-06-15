@@ -2,7 +2,6 @@ package strength
 
 import (
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -13,29 +12,29 @@ import (
 
 func TestWeight_NewWeight(t *testing.T) {
 	tests := []struct {
-		name      string
-		kg        float64
-		wantError bool
+		name        string
+		kg          float64
+		exceptError bool
 	}{
 		{
-			name:      "有効な重量",
-			kg:        95.5,
-			wantError: false,
+			name:        "正常系:有効な重量",
+			kg:          95.5,
+			exceptError: false,
 		},
 		{
-			name:      "0kg",
-			kg:        0,
-			wantError: false,
+			name:        "正常系:0kg",
+			kg:          0,
+			exceptError: false,
 		},
 		{
-			name:      "負の重量",
-			kg:        -10,
-			wantError: true,
+			name:        "異常系:負の重量",
+			kg:          -10,
+			exceptError: true,
 		},
 		{
-			name:      "過大な重量",
-			kg:        1001,
-			wantError: true,
+			name:        "異常系:過大な重量",
+			kg:          1001,
+			exceptError: true,
 		},
 	}
 
@@ -45,7 +44,7 @@ func TestWeight_NewWeight(t *testing.T) {
 			weight, err := NewWeight(tt.kg)
 
 			// Assert
-			if tt.wantError {
+			if tt.exceptError {
 				assert.Error(t, err)
 			} else {
 				assert.NoError(t, err)
@@ -163,54 +162,97 @@ func TestRPE_NewRPE(t *testing.T) {
 }
 
 func TestSet_NewSet(t *testing.T) {
-	// Arrange
-	weight, _ := NewWeight(95.0)
-	reps, _ := NewReps(8)
-	restTime, _ := NewRestTime(3 * time.Minute)
-	rpe, _ := NewRPE(8)
-
-	// Act
-	set := NewSet(weight, reps, restTime, &rpe)
-
-	// Assert
-	assert.True(t, set.Weight().Equals(weight))
-	assert.True(t, set.Reps().Equals(reps))
-	assert.True(t, set.RestTime().Equals(restTime))
-	assert.NotNil(t, set.RPE())
-	assert.Equal(t, 8, set.RPE().Rating())
-}
-
-func TestSet_String(t *testing.T) {
-	// Arrange
-	weight, _ := NewWeight(95.0)
-	reps, _ := NewReps(8)
-	restTime, _ := NewRestTime(3 * time.Minute)
-	rpe, _ := NewRPE(8)
-
 	tests := []struct {
-		name string
-		set  Set
-		want string
+		name      string
+		weight    float64
+		reps      int
+		rpeRating *int
+		expectRPE bool
 	}{
 		{
-			name: "RPEありのセット",
-			set:  NewSet(weight, reps, restTime, &rpe),
-			want: "95.0kg × 8回 (休憩: 3m0s) RPE 8",
+			name:      "RPEありのセット作成",
+			weight:    95.0,
+			reps:      8,
+			rpeRating: &[]int{8}[0],
+			expectRPE: true,
 		},
 		{
-			name: "RPEなしのセット",
-			set:  NewSet(weight, reps, restTime, nil),
-			want: "95.0kg × 8回 (休憩: 3m0s)",
+			name:      "RPEなしのセット作成",
+			weight:    100.0,
+			reps:      5,
+			rpeRating: nil,
+			expectRPE: false,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Act
-			result := tt.set.String()
+			// Given
+			weight, _ := NewWeight(tt.weight)
+			reps, _ := NewReps(tt.reps)
+			var rpe *RPE
+			if tt.rpeRating != nil {
+				rpeVal, _ := NewRPE(*tt.rpeRating)
+				rpe = &rpeVal
+			}
 
-			// Assert
-			assert.Equal(t, tt.want, result)
+			// When
+			set := NewSet(weight, reps, rpe)
+
+			// Then
+			assert.True(t, set.Weight().Equals(weight))
+			assert.True(t, set.Reps().Equals(reps))
+			if tt.expectRPE {
+				assert.NotNil(t, set.RPE())
+				assert.Equal(t, *tt.rpeRating, set.RPE().Rating())
+			} else {
+				assert.Nil(t, set.RPE())
+			}
+		})
+	}
+}
+
+func TestSet_String(t *testing.T) {
+	tests := []struct {
+		name      string
+		weight    float64
+		reps      int
+		rpeRating *int
+		expected  string
+	}{
+		{
+			name:      "RPEありのセット文字列表示",
+			weight:    95.0,
+			reps:      8,
+			rpeRating: &[]int{8}[0],
+			expected:  "95.0kg × 8回 RPE 8",
+		},
+		{
+			name:      "RPEなしのセット文字列表示",
+			weight:    100.0,
+			reps:      5,
+			rpeRating: nil,
+			expected:  "100.0kg × 5回",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Given
+			weight, _ := NewWeight(tt.weight)
+			reps, _ := NewReps(tt.reps)
+			var rpe *RPE
+			if tt.rpeRating != nil {
+				rpeVal, _ := NewRPE(*tt.rpeRating)
+				rpe = &rpeVal
+			}
+			set := NewSet(weight, reps, rpe)
+
+			// When
+			result := set.String()
+
+			// Then
+			assert.Equal(t, tt.expected, result)
 		})
 	}
 }

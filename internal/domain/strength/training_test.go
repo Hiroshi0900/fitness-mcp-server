@@ -33,7 +33,7 @@ func TestStrengthTraining_AddExercise(t *testing.T) {
 	// Arrange
 	id := shared.NewTrainingID()
 	training := NewStrengthTraining(id, time.Now(), "")
-	exercise := NewExercise(BenchPress, Compound)
+	exercise := NewExercise(BenchPress)
 
 	// Act
 	training.AddExercise(exercise)
@@ -63,8 +63,8 @@ func TestStrengthTraining_GetExerciseByName(t *testing.T) {
 	id := shared.NewTrainingID()
 	training := NewStrengthTraining(id, time.Now(), "")
 
-	benchPress := NewExercise(BenchPress, Compound)
-	squat := NewExercise(Squat, Compound)
+	benchPress := NewExercise(BenchPress)
+	squat := NewExercise(Squat)
 
 	training.AddExercise(benchPress)
 	training.AddExercise(squat)
@@ -95,13 +95,12 @@ func TestStrengthTraining_TotalSets(t *testing.T) {
 	id := shared.NewTrainingID()
 	training := NewStrengthTraining(id, time.Now(), "")
 
-	exercise1 := NewExercise(BenchPress, Compound)
-	exercise2 := NewExercise(Squat, Compound)
+	exercise1 := NewExercise(BenchPress)
+	exercise2 := NewExercise(Squat)
 
 	weight, _ := NewWeight(95.0)
 	reps, _ := NewReps(8)
-	restTime, _ := NewRestTime(3 * time.Minute)
-	set := NewSet(weight, reps, restTime, nil)
+	set := NewSet(weight, reps, nil)
 
 	exercise1.AddSet(set)
 	exercise1.AddSet(set)
@@ -122,11 +121,10 @@ func TestStrengthTraining_TotalVolume(t *testing.T) {
 	id := shared.NewTrainingID()
 	training := NewStrengthTraining(id, time.Now(), "")
 
-	exercise := NewExercise(BenchPress, Compound)
+	exercise := NewExercise(BenchPress)
 	weight, _ := NewWeight(95.0)
 	reps, _ := NewReps(8)
-	restTime, _ := NewRestTime(3 * time.Minute)
-	set := NewSet(weight, reps, restTime, nil)
+	set := NewSet(weight, reps, nil)
 
 	exercise.AddSet(set)
 	exercise.AddSet(set)
@@ -151,28 +149,26 @@ func TestStrengthTraining_IntegrationTest(t *testing.T) {
 	training := NewStrengthTraining(id, date, "今日は95kg目指す")
 
 	// ベンチプレスエクササイズを作成
-	benchPress := NewExercise(BenchPress, Compound)
+	benchPress := NewExercise(BenchPress)
 
 	// ウォームアップセット
 	warmupWeight, _ := NewWeight(60.0)
 	warmupReps, _ := NewReps(10)
-	restTime, _ := NewRestTime(2 * time.Minute)
-	benchPress.AddSet(NewSet(warmupWeight, warmupReps, restTime, nil))
+	benchPress.AddSet(NewSet(warmupWeight, warmupReps, nil))
 
 	// メインセット
 	mainWeight, _ := NewWeight(95.0)
 	mainReps1, _ := NewReps(8)
 	mainReps2, _ := NewReps(6)
 	mainReps3, _ := NewReps(5)
-	mainRestTime, _ := NewRestTime(3 * time.Minute)
 
 	rpe8, _ := NewRPE(8)
 	rpe9, _ := NewRPE(9)
 	rpe10, _ := NewRPE(10)
 
-	benchPress.AddSet(NewSet(mainWeight, mainReps1, mainRestTime, &rpe8))
-	benchPress.AddSet(NewSet(mainWeight, mainReps2, mainRestTime, &rpe9))
-	benchPress.AddSet(NewSet(mainWeight, mainReps3, mainRestTime, &rpe10))
+	benchPress.AddSet(NewSet(mainWeight, mainReps1, &rpe8))
+	benchPress.AddSet(NewSet(mainWeight, mainReps2, &rpe9))
+	benchPress.AddSet(NewSet(mainWeight, mainReps3, &rpe10))
 
 	training.AddExercise(benchPress)
 

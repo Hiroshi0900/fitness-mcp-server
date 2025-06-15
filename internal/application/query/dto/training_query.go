@@ -34,17 +34,15 @@ type TrainingDTO struct {
 
 // ExerciseDTO はエクササイズのDTO
 type ExerciseDTO struct {
-	Name     string    `json:"name"`
-	Category string    `json:"category"`
-	Sets     []*SetDTO `json:"sets"`
+	Name string    `json:"name"`
+	Sets []*SetDTO `json:"sets"`
 }
 
 // SetDTO はセットのDTO
 type SetDTO struct {
-	WeightKg        float64 `json:"weight_kg"`
-	Reps            int     `json:"reps"`
-	RestTimeSeconds int     `json:"rest_time_seconds"`
-	RPE             *int    `json:"rpe,omitempty"`
+	WeightKg float64 `json:"weight_kg"`
+	Reps     int     `json:"reps"`
+	RPE      *int    `json:"rpe,omitempty"`
 }
 
 // SummaryDTO はトレーニングセッションの概要DTO
@@ -88,18 +86,16 @@ func ExerciseToDTO(exercise *strength.Exercise) *ExerciseDTO {
 	}
 
 	return &ExerciseDTO{
-		Name:     exercise.Name().String(),
-		Category: exercise.Category().String(),
-		Sets:     sets,
+		Name: exercise.Name().String(),
+		Sets: sets,
 	}
 }
 
 // SetToDTO はSetをSetDTOに変換します
 func SetToDTO(set strength.Set) *SetDTO {
 	dto := &SetDTO{
-		WeightKg:        set.Weight().Kg(),
-		Reps:            set.Reps().Count(),
-		RestTimeSeconds: int(set.RestTime().Duration().Seconds()),
+		WeightKg: set.Weight().Kg(),
+		Reps:     set.Reps().Count(),
 	}
 
 	if rpe := set.RPE(); rpe != nil {
