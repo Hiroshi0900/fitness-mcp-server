@@ -1,8 +1,6 @@
 module fitness-mcp-server
 
-go 1.23.0
-
-toolchain go1.23.4
+go 1.24.4
 
 require (
 	github.com/google/uuid v1.6.0

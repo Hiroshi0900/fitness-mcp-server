@@ -8,9 +8,7 @@ RUN apk add --no-cache gcc musl-dev sqlite-dev
 WORKDIR /app
 
 # Go modulesのコピーと依存関係の取得
-# Docker用のgo.modファイル（Go 1.24.4）を使用
-COPY go.mod.docker go.mod
-COPY go.sum ./
+COPY go.mod go.sum ./
 RUN go mod download
 
 # ソースコードのコピー
