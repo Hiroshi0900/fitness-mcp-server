@@ -84,6 +84,7 @@ func (r *StrengthRepository) migrate() error {
 	}{
 		{"001", "migrations/001_initial_schema.sql"},
 		{"002", "migrations/002_remove_resttime_category.sql"},
+		{"003", "migrations/003_add_running_tables.sql"},
 	}
 
 	for _, migration := range migrations {
